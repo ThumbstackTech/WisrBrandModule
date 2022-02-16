@@ -1,0 +1,12 @@
+{
+  "name": "wisr_algo",
+  "version": "1.0.0",
+  "description": "",
+  "main": "test2.js",
+  "scripts": {
+    "build": "tsc WisrAlgo.ts",
+    "run": "node WisrAlgo.js"
+  },
+  "author": "",
+  "license": "ISC"
+}
