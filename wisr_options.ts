@@ -1,5 +1,5 @@
 export {}
-import SchoolData from './school.json'
+import SchoolData from './data/school'
 type OptionName =
     | 'Locations'
     | 'Medium';
@@ -13,13 +13,13 @@ export interface FilteredMedium{
 }
 export default class SchoolFilter {
     public getSelectedOptions = (OptionName : OptionName,
-        FilteredLocation : FilteredLocation,
-        FilteredMedium : FilteredMedium) =>{
+        FilteredLocation? : FilteredLocation,
+        FilteredMedium? : FilteredMedium) =>{
         if(OptionName === 'Locations'){
-            return this.filterLocation(FilteredLocation)
+            return this.filterLocation(FilteredLocation!)
         }
         if(OptionName === 'Medium'){
-            return this.filterMedium(FilteredMedium)
+            return this.filterMedium(FilteredMedium!)
         }
     }
     private filterLocation = (location : FilteredLocation) =>{
@@ -44,9 +44,12 @@ export default class SchoolFilter {
                 filteredSchool.push(SchoolData[i])
             }
         }
+        return filteredSchool
     }
+
 }
 
 let filterSchools = new SchoolFilter()
 
-console.log(filterSchools.getSelectedOptions('Locations',{City: 'thane',State: 'Maharashtra'},{language: 'English'}))
+console.log(filterSchools.getSelectedOptions('Locations',{City: 'thane',State: 'Maharashtra'},{language: ''}))
+// console.log(filterSchools.getSelectedOptions('Medium',{City: '',State: ''},{language: 'Hindi'}))
