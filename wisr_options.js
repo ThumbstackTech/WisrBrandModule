@@ -39,5 +39,5 @@ var SchoolFilter = /** @class */ (function () {
 }());
 exports["default"] = SchoolFilter;
 var filterSchools = new SchoolFilter();
-// console.log(filterSchools.getSelectedOptions('Locations',{City: 'thane',State: 'Maharashtra'},{language: 'English'}))
-console.log(filterSchools.getSelectedOptions('Medium', { City: '', State: '' }, { language: 'Hindi' }));
+console.log(filterSchools.getSelectedOptions('Locations', { City: 'thane', State: 'Maharashtra' }, { language: 'English' }));
+// console.log(filterSchools.getSelectedOptions('Medium',{City: '',State: ''},{language: 'Hindi'}))
