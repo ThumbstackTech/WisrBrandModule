@@ -5,7 +5,10 @@ import ClassroomData from './data/classrooms'
 import BrandData from './data/brand'
 import BrandSubCategoryData from './data/brandCategoryMaster'
 import InventoryAttributesData from './data/inventoryAttributes'
-import ActivitesAttributesData from './data/activitiesAttribute'
+import ActivitiesAttributesData from './data/activitiesAttribute'
+import ActivitiesData from './data/activities'
+import CampaignData from './data/campaign'
+
 
 import {Activities} from './Interfaces/activities'
 import {School} from './Interfaces/School'
@@ -15,14 +18,15 @@ import {Brand} from './Interfaces/brand'
 import {BrandsSubCategory} from './Interfaces/brandsSubCategory'
 import {InventoryAttributes} from './Interfaces/InventoryAttribute'
 import { ActivitiesAttributes } from './Interfaces/activitiesAttributes'
+import {Campaign} from './Interfaces/campaign'
 type OptionName =
     | 'Locations'
     | 'Medium'
     | 'Inventory';
 
 export interface FilteredLocation{
-    State : String,
-    City: String,
+    State : string,
+    City: string,
 }
 export interface FilteredMedium{
     language: String
@@ -30,34 +34,37 @@ export interface FilteredMedium{
 export interface FilteredInventory{
     inventoryName: String
 }
+export interface AllSchoolCampaignData{
+    BrandList?: Brand[];
+    BrandsSubCategory? : BrandsSubCategory[];
+    SchoolList?: School[];
+    ClassroomList?: Classroom[];
+    Inventories?: Inventory[];
+    InventoryAttributes?: InventoryAttributes[];
+    Activities?: Activities[];
+    ActivitiesAttributes?: ActivitiesAttributes[];
+    CampaignList?: Campaign[];
+}
 export default class SchoolFilter {
-    // private BrandList : Brand;
-    // private BrandsSubCategory : BrandsSubCategory;
-    // private SchoolList : School;
-    // private ClassroomList: Classroom;
-    // private Inventories: Inventory;
-    // private InventoryAtributes: InventoryAttributes;
-    // private Activities: Activities;
-    // private ActivitiesAttributes: ActivitiesAttributes;
-    // constructor(
-    //     BrandList : Brand,
-    //     BrandsSubCategory : BrandsSubCategory,
-    //     SchoolList: School,
-    //     ClassroomList: Classroom,
-    //     Inventories: Inventory,
-    //     InventoryAttributes : InventoryAttributes,
-    //     Activities: Activities,
-    //     ActivitiesAttributes: ActivitiesAttributes
-    // ){
-    //     this.BrandList = BrandList;
-    //     this.BrandsSubCategory = BrandsSubCategory;
-    //     this.SchoolList = SchoolList;
-    //     this.ClassroomList = ClassroomList;
-    //     this.Inventories = Inventories;
-    //     this.InventoryAtributes = InventoryAttributes;
-    //     this.Activities = Activities;
-    //     this.ActivitiesAttributes = ActivitiesAttributes
-    // };
+    private AllSchoolCampaignData : AllSchoolCampaignData;
+    public data(): AllSchoolCampaignData{
+      return this.AllSchoolCampaignData;
+    }
+    constructor(AllSchoolCampaignData: AllSchoolCampaignData){
+        this.AllSchoolCampaignData = AllSchoolCampaignData;
+        const {
+            BrandList,
+            BrandsSubCategory,
+            SchoolList,
+            ClassroomList,
+            Inventories,
+            InventoryAttributes,
+            Activities,
+            ActivitiesAttributes,
+            CampaignList
+        } = this.AllSchoolCampaignData;
+
+    };
     
     public getSelectedOptions = (OptionName : OptionName,
         FilteredLocation? : FilteredLocation,
@@ -112,14 +119,23 @@ export default class SchoolFilter {
     }
 }
 
-let filterSchools = new SchoolFilter()
-// console.log(filterSchools.getSelectedOptions('Locations',{City: 'thane',State: 'Maharashtra'},{language: ''}))
+// let filterSchools = new SchoolFilter(
+// BrandList: BrandData,
+// SchoolList: SchoolData,
+// Classroom: ClassroomData,
+// Inventories: InventoryData,
+// InventoryAttributes: InventoryAttributesData,
+// Activities: ActivitiesData,
+// ActivitiesAttributes: ActivitiesAttributesData
+// )
+let filteredSchools = new SchoolFilter({})
+console.log(filteredSchools.getSelectedOptions('Locations',{City: 'thane',State: 'Maharashtra'},{language: ''}))
 
 // console.log(filterSchools.getSelectedOptions('Medium',{City: '',State: ''},{language: 'Hindi'}))
 
 // console.log(filterSchools.getSelectedOptions('Inventory',{City: '',State: ''},{language: ''},{inventoryName: 'Uniform'}))
 
-console.log(filterSchools.filterInventory({inventoryName: 'Auditorium 1'}))
+// console.log(filterSchools.filterInventory({inventoryName: 'Auditorium 1'}))
 
 // console.log(filterSchools.filterLocation({City: 'thane', State: 'Maharashtra'}))
 

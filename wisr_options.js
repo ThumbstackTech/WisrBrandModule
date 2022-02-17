@@ -3,34 +3,7 @@ exports.__esModule = true;
 var school_1 = require("./data/school");
 var inventories_1 = require("./data/inventories");
 var SchoolFilter = /** @class */ (function () {
-    function SchoolFilter() {
-        // private BrandList : Brand;
-        // private BrandsSubCategory : BrandsSubCategory;
-        // private SchoolList : School;
-        // private ClassroomList: Classroom;
-        // private Inventories: Inventory;
-        // private InventoryAtributes: InventoryAttributes;
-        // private Activities: Activities;
-        // private ActivitiesAttributes: ActivitiesAttributes;
-        // constructor(
-        //     BrandList : Brand,
-        //     BrandsSubCategory : BrandsSubCategory,
-        //     SchoolList: School,
-        //     ClassroomList: Classroom,
-        //     Inventories: Inventory,
-        //     InventoryAttributes : InventoryAttributes,
-        //     Activities: Activities,
-        //     ActivitiesAttributes: ActivitiesAttributes
-        // ){
-        //     this.BrandList = BrandList;
-        //     this.BrandsSubCategory = BrandsSubCategory;
-        //     this.SchoolList = SchoolList;
-        //     this.ClassroomList = ClassroomList;
-        //     this.Inventories = Inventories;
-        //     this.InventoryAtributes = InventoryAttributes;
-        //     this.Activities = Activities;
-        //     this.ActivitiesAttributes = ActivitiesAttributes
-        // };
+    function SchoolFilter(AllSchoolCampaignData) {
         var _this = this;
         this.getSelectedOptions = function (OptionName, FilteredLocation, FilteredMedium, FilteredInventory) {
             if (OptionName === 'Locations') {
@@ -79,14 +52,29 @@ var SchoolFilter = /** @class */ (function () {
             }
             return filteredSchool;
         };
+        this.AllSchoolCampaignData = AllSchoolCampaignData;
+        var _a = this.AllSchoolCampaignData, BrandList = _a.BrandList, BrandsSubCategory = _a.BrandsSubCategory, SchoolList = _a.SchoolList, ClassroomList = _a.ClassroomList, Inventories = _a.Inventories, InventoryAttributes = _a.InventoryAttributes, Activities = _a.Activities, ActivitiesAttributes = _a.ActivitiesAttributes, CampaignList = _a.CampaignList;
     }
+    SchoolFilter.prototype.data = function () {
+        return this.AllSchoolCampaignData;
+    };
+    ;
     return SchoolFilter;
 }());
 exports["default"] = SchoolFilter;
-var filterSchools = new SchoolFilter();
-// console.log(filterSchools.getSelectedOptions('Locations',{City: 'thane',State: 'Maharashtra'},{language: ''}))
+// let filterSchools = new SchoolFilter(
+// BrandList: BrandData,
+// SchoolList: SchoolData,
+// Classroom: ClassroomData,
+// Inventories: InventoryData,
+// InventoryAttributes: InventoryAttributesData,
+// Activities: ActivitiesData,
+// ActivitiesAttributes: ActivitiesAttributesData
+// )
+var filteredSchools = new SchoolFilter({});
+console.log(filteredSchools.getSelectedOptions('Locations', { City: 'thane', State: 'Maharashtra' }, { language: '' }));
 // console.log(filterSchools.getSelectedOptions('Medium',{City: '',State: ''},{language: 'Hindi'}))
 // console.log(filterSchools.getSelectedOptions('Inventory',{City: '',State: ''},{language: ''},{inventoryName: 'Uniform'}))
-console.log(filterSchools.filterInventory({ inventoryName: 'Auditorium 1' }));
+// console.log(filterSchools.filterInventory({inventoryName: 'Auditorium 1'}))
 // console.log(filterSchools.filterLocation({City: 'thane', State: 'Maharashtra'}))
 // console.log(filterSchools.filterMedium({language: 'English'}))
