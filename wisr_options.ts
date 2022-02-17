@@ -38,7 +38,13 @@ export default class SchoolFilter {
 
     }
     private filterMedium = (medium : FilteredMedium) =>{
-
+        const {language} = medium;
+        let filteredSchool = [];
+        for(let i=0; i<SchoolData.length;i++){
+            if(SchoolData[i].language === language){
+                filteredSchool.push(SchoolData[i])
+            }
+        }
     }
 }
 
