@@ -4,7 +4,6 @@ type OptionName =
     | 'Locations'
     | 'Medium';
 
-
 export interface FilteredLocation{
     State : String,
     City: String,
@@ -33,7 +32,7 @@ export default class SchoolFilter {
                     }
             }
         }
-        
+
         return filteredSchool
 
     }
@@ -47,8 +46,6 @@ export default class SchoolFilter {
         }
     }
 }
-
-
 
 let filterSchools = new SchoolFilter()
 

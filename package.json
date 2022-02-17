@@ -4,9 +4,15 @@
   "description": "",
   "main": "test2.js",
   "scripts": {
-    "build": "tsc WisrAlgo.ts",
-    "run": "node WisrAlgo.js"
+    "build": "tsc wisr_options.ts",
+    "run": "node wisr_options.js"
   },
   "author": "",
-  "license": "ISC"
+  "license": "ISC",
+  "dependencies": {
+    "jquery": "^3.6.0"
+  },
+  "devDependencies": {
+    "@types/jquery": "^3.5.13"
+  }
 }
