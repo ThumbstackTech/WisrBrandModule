@@ -19,6 +19,7 @@ import {BrandsSubCategory} from './Interfaces/brandsSubCategory'
 import {InventoryAttributes} from './Interfaces/InventoryAttribute'
 import { ActivitiesAttributes } from './Interfaces/activitiesAttributes'
 import {Campaign} from './Interfaces/campaign'
+
 type OptionName =
     | 'Locations'
     | 'Medium'
@@ -35,15 +36,15 @@ export interface FilteredInventory{
     inventoryName: string
 }
 export interface AllSchoolCampaignData{
-    BrandList?: Brand[];
-    BrandsSubCategory? : BrandsSubCategory[];
-    SchoolList?: School[];
-    ClassroomList?: Classroom[];
-    Inventories?: Inventory[];
-    InventoryAttributes?: InventoryAttributes[];
-    Activities?: Activities[];
-    ActivitiesAttributes?: ActivitiesAttributes[];
-    CampaignList?: Campaign[];
+    // BrandList?: Brand[];
+    // BrandsSubCategory? : BrandsSubCategory[];
+    // SchoolList?: School[];
+    // ClassroomList?: Classroom[];
+    // Inventories?: Inventory[];
+    // InventoryAttributes?: InventoryAttributes[];
+    // Activities?: Activities[];
+    // ActivitiesAttributes?: ActivitiesAttributes[];
+    Campaign?: Campaign[];
 }
 export default class SchoolFilter {
     private AllSchoolCampaignData : AllSchoolCampaignData;
@@ -53,15 +54,15 @@ export default class SchoolFilter {
     constructor(AllSchoolCampaignData: AllSchoolCampaignData){
         this.AllSchoolCampaignData = AllSchoolCampaignData;
         const {
-            BrandList,
-            BrandsSubCategory,
-            SchoolList,
-            ClassroomList,
-            Inventories,
-            InventoryAttributes,
-            Activities,
-            ActivitiesAttributes,
-            CampaignList
+            // BrandList,
+            // BrandsSubCategory,
+            // SchoolList,
+            // ClassroomList,
+            // Inventories,
+            // InventoryAttributes,
+            // Activities,
+            // ActivitiesAttributes,
+            Campaign
         } = this.AllSchoolCampaignData;
 
     };
@@ -82,10 +83,14 @@ export default class SchoolFilter {
     }
     public filterLocation = (location : FilteredLocation) =>{
         const {State,City} = location;
+        let {Campaign} = this.AllSchoolCampaignData;
+        let allLocations = [Campaign?.forEach(campaign =>{
+            campaign.locations
+        }),City]
         let filteredSchool = [];
         if(State.length !==0 && City.length !==0){
             for(let i=0; i<SchoolData.length;i++){
-                    if(SchoolData[i].state === State && SchoolData[i].city === City){
+                    if(SchoolData[i].state === State || allLocations.indexOf(SchoolData[i].city) > -1){
                         filteredSchool.push(SchoolData[i])
                     }
             }
@@ -94,6 +99,7 @@ export default class SchoolFilter {
     }
     public filterMedium = (medium : FilteredMedium) =>{
         const {language} = medium;
+        
         let filteredSchool = [];
         for(let i=0; i<SchoolData.length;i++){
             if(SchoolData[i].language === language){
@@ -119,7 +125,7 @@ export default class SchoolFilter {
     }
 }
 
-// let filterSchools = new SchoolFilter(
+// let filteredSchools = new SchoolFilter(
 // BrandList: BrandData,
 // SchoolList: SchoolData,
 // Classroom: ClassroomData,
@@ -128,7 +134,7 @@ export default class SchoolFilter {
 // Activities: ActivitiesData,
 // ActivitiesAttributes: ActivitiesAttributesData
 // )
-let filteredSchools = new SchoolFilter({})
+let filteredSchools = new SchoolFilter({Campaign: CampaignData[0]})
 // console.log(filteredSchools.getSelectedOptions('Locations',{City: 'thane',State: 'Maharashtra'},{language: ''}))
 
 console.log(filteredSchools.getSelectedOptions('Medium',{City: '',State: ''},{language: 'Hindi'}))
