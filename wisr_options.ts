@@ -29,10 +29,10 @@ export interface FilteredLocation{
     City: string,
 }
 export interface FilteredMedium{
-    language: String
+    language: string
 }
 export interface FilteredInventory{
-    inventoryName: String
+    inventoryName: string
 }
 export interface AllSchoolCampaignData{
     BrandList?: Brand[];
@@ -129,15 +129,15 @@ export default class SchoolFilter {
 // ActivitiesAttributes: ActivitiesAttributesData
 // )
 let filteredSchools = new SchoolFilter({})
-console.log(filteredSchools.getSelectedOptions('Locations',{City: 'thane',State: 'Maharashtra'},{language: ''}))
+// console.log(filteredSchools.getSelectedOptions('Locations',{City: 'thane',State: 'Maharashtra'},{language: ''}))
 
-// console.log(filterSchools.getSelectedOptions('Medium',{City: '',State: ''},{language: 'Hindi'}))
+console.log(filteredSchools.getSelectedOptions('Medium',{City: '',State: ''},{language: 'Hindi'}))
 
-// console.log(filterSchools.getSelectedOptions('Inventory',{City: '',State: ''},{language: ''},{inventoryName: 'Uniform'}))
+// console.log(filteredSchools.getSelectedOptions('Inventory',{City: '',State: ''},{language: ''},{inventoryName: 'Uniform'}))
 
-// console.log(filterSchools.filterInventory({inventoryName: 'Auditorium 1'}))
+// console.log(filteredSchools.filterInventory({inventoryName: 'Auditorium 1'}))
 
-// console.log(filterSchools.filterLocation({City: 'thane', State: 'Maharashtra'}))
+// console.log(filteredSchools.filterLocation({City: 'thane', State: 'Maharashtra'}))
 
-// console.log(filterSchools.filterMedium({language: 'English'}))
+// console.log(filteredSchools.filterMedium({language: 'English'}))
 
