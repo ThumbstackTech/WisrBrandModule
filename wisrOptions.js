@@ -42,9 +42,9 @@ var WisrOptionService = /** @class */ (function () {
         this.$PercentageDiscountInWISR = new rxjs_1.BehaviorSubject(0.1);
         this.$InventoriesNames = new rxjs_1.BehaviorSubject([]);
         this.$EventsNames = new rxjs_1.BehaviorSubject([]);
-        this.$SetBudget = new rxjs_1.BehaviorSubject(3000000);
+        this.$SetBudget = new rxjs_1.BehaviorSubject(0);
         this.$GetBudget = new rxjs_1.BehaviorSubject(0);
-        this.$CampaignDurationInDays = new rxjs_1.BehaviorSubject(100);
+        this.$CampaignDurationInDays = new rxjs_1.BehaviorSubject(0);
         this.$SetReach = new rxjs_1.BehaviorSubject(0);
         this.$GetReach = new rxjs_1.BehaviorSubject(0);
         this.$SetImpressions = new rxjs_1.BehaviorSubject(0);
@@ -53,7 +53,7 @@ var WisrOptionService = /** @class */ (function () {
         this.$CatASchool = new rxjs_1.BehaviorSubject([]);
         this.$CatBSchool = new rxjs_1.BehaviorSubject([]);
         this.$CatCSchool = new rxjs_1.BehaviorSubject([]);
-        this.$NoOfDaysInYear = new rxjs_1.BehaviorSubject(210);
+        this.$NoOfDaysInYear = new rxjs_1.BehaviorSubject(365);
         this.$MinBudget = new rxjs_1.BehaviorSubject(0);
         this.$MaxBudget = new rxjs_1.BehaviorSubject(0);
         this.$IncreasedBudget = new rxjs_1.BehaviorSubject(0);
@@ -79,10 +79,10 @@ var WisrOptionService = /** @class */ (function () {
             if (IncreasedReach >= _this.$MinReach.value &&
                 IncreasedReach <= _this.$MaxReach.value) {
                 var schoolsReach_1 = lodash_1["default"].sumBy(_this.$FilteredSchool.getValue(), function (school) { return school.totalNoOfGirls + school.totalNoOfBoys; });
-                var schoolsAddedByReach = lodash_1["default"].takeWhile(_this.sortSchoolsByReach(lodash_1["default"].filter(lodash_1["default"].differenceBy(FilteredSchools, _this.$FilteredSchool.getValue(), function (school) { return school._id; }), function (school) {
+                var schoolsAddedByReach = lodash_1["default"].takeWhile(_this.sortSchoolsByReachForWisrOption(lodash_1["default"].filter(lodash_1["default"].differenceBy(FilteredSchools, _this.$FilteredSchool.getValue(), function (school) { return school._id; }), function (school) {
                     return school.totalNoOfGirls + school.totalNoOfBoys <=
                         IncreasedReach - schoolsReach_1;
-                }), 'asc'), function (school) {
+                }), 'desc'), function (school) {
                     schoolsReach_1 += school.totalNoOfGirls + school.totalNoOfBoys;
                     return schoolsReach_1 <= IncreasedReach;
                 });
@@ -107,6 +107,11 @@ var WisrOptionService = /** @class */ (function () {
                 schoolName: school.schoolName,
                 category: school.category,
                 noOfTeachers: school.noOfTeachers,
+                pinCode: school.pincode,
+                city: school.city,
+                address: school.address,
+                state: school.state,
+                floors: school.floors,
                 classrooms: _this.FilterClassroomBySchoolId(school._id),
                 inventories: _this.FilterInventoryBySchoolId(school._id),
                 events: _this.FilterEventBySchoolId(school._id)
@@ -159,9 +164,9 @@ var WisrOptionService = /** @class */ (function () {
                 return AttributeObj._id &&
                     AttributeObj.name &&
                     AttributeObj.units &&
-                    AttributeObj.length &&
-                    AttributeObj.breadth &&
-                    AttributeObj.height &&
+                    ((AttributeObj.length && AttributeObj.breadth) ||
+                        (AttributeObj.length && AttributeObj.height) ||
+                        (AttributeObj.breadth && AttributeObj.height)) &&
                     AttributeObj.inventory &&
                     AttributeObj.opportunitiesToSee &&
                     AttributeObj.materialCost &&
@@ -172,9 +177,9 @@ var WisrOptionService = /** @class */ (function () {
                 _id: Attribute._id,
                 name: Attribute.name,
                 units: Attribute.units,
-                length: Attribute.length,
-                breadth: Attribute.breadth,
-                height: Attribute.height,
+                length: Attribute.length <= 0 ? 1 : Attribute.length,
+                breadth: Attribute.breadth <= 0 ? 1 : Attribute.breadth,
+                height: Attribute.height <= 0 ? 1 : Attribute.height,
                 inventory: Attribute.inventory,
                 opportunitiesToSee: Attribute.opportunitiesToSee,
                 materialCost: Attribute.materialCost,
@@ -189,7 +194,7 @@ var WisrOptionService = /** @class */ (function () {
             return Math.ceil(_this.$CampaignDurationInDays.getValue() / (365 / noOfChangesYearly));
         };
         this.SetBrandOutlayByDuration = function (brandOutlay) {
-            return (brandOutlay /
+            return Math.round(brandOutlay /
                 (_this.$NoOfDaysInYear.getValue() /
                     _this.$CampaignDurationInDays.getValue()));
         };
@@ -215,9 +220,9 @@ var WisrOptionService = /** @class */ (function () {
                 return AttributeObj._id &&
                     AttributeObj.name &&
                     AttributeObj.units &&
-                    AttributeObj.length &&
-                    AttributeObj.breadth &&
-                    AttributeObj.height &&
+                    ((AttributeObj.length && AttributeObj.breadth) ||
+                        (AttributeObj.length && AttributeObj.height) ||
+                        (AttributeObj.breadth && AttributeObj.height)) &&
                     AttributeObj.opportunitiesToSee &&
                     AttributeObj.materialCost &&
                     AttributeObj.quantity &&
@@ -226,16 +231,16 @@ var WisrOptionService = /** @class */ (function () {
                 _id: Attribute._id,
                 name: Attribute.name,
                 units: Attribute.units,
-                length: Attribute.length,
-                breadth: Attribute.breadth,
-                height: Attribute.height,
+                length: Attribute.length <= 0 ? 1 : Attribute.length,
+                breadth: Attribute.breadth <= 0 ? 1 : Attribute.breadth,
+                height: Attribute.height <= 0 ? 1 : Attribute.height,
                 opportunitiesToSee: Attribute.opportunitiesToSee,
                 materialCost: Attribute.materialCost,
                 noOfChangesYearly: Attribute.noOfChangesYearly,
                 quantity: Attribute.quantity,
                 noOfChanges: _this.SetNoOfChanges(Attribute.noOfChangesYearly),
                 brandOutlay: Attribute.brandOutlay,
-                brandOutlayByDuration: _this.SetBrandOutlayByDuration(Attribute.brandOutlay)
+                brandOutlayByDuration: Attribute.brandOutlay
             }); });
         };
         this.mapSchoolWithReachDataAndBrandOutlay = function (schoolData) {
@@ -263,20 +268,20 @@ var WisrOptionService = /** @class */ (function () {
             var internalCostPerAttribute = _this.$TotalInternalCostPerSchool.getValue() / totalAttributes;
             return inventories.map(function (inventory) {
                 var multiplyBy = _this.inventoryNOPAffectedBy(inventory.parentName);
-                return __assign(__assign({}, inventory), { attributes: inventory.attributes.map(function (attribute) { return (__assign(__assign({}, attribute), { internalCostPerSchool: internalCostPerAttribute, costPerSchool: _this.calculateInventoriesAttributeCostOfProduction(multiplyBy, attribute, noOfBoys, noOfGirls, noOfTeachers, noOfClassroom) + internalCostPerAttribute, impressions: multiplyBy === 'ByTeachers'
+                return __assign(__assign({}, inventory), { attributes: inventory.attributes.map(function (attribute) { return (__assign(__assign({}, attribute), { internalCostPerSchool: internalCostPerAttribute, costPerSchool: _this.calculateInventoriesAttributeCostOfProduction(multiplyBy, attribute, noOfBoys, noOfGirls, noOfTeachers, noOfClassroom) + internalCostPerAttribute, impressions: Math.round(multiplyBy === 'ByTeachers'
                             ? noOfTeachers * 0.95 + _this.$CampaignDurationInDays.getValue()
                             : (noOfBoys + noOfGirls) *
                                 0.9 *
                                 _this.$CampaignDurationInDays.getValue() *
-                                attribute.opportunitiesToSee })); }) });
+                                attribute.opportunitiesToSee) })); }) });
             });
         };
         this.calculateEventsCostPerSchoolAndImpression = function (events, noOfBoys, noOfGirls, noOfTeachers, noOfClassroom) {
             return events.map(function (event) {
-                return __assign(__assign({}, event), { attributes: event.attributes.map(function (attribute) { return (__assign(__assign({}, attribute), { costPerSchool: _this.calculateEventsAttributeCostOfProduction(attribute.noOfChanges, attribute), impressions: (noOfBoys + noOfGirls) *
+                return __assign(__assign({}, event), { attributes: event.attributes.map(function (attribute) { return (__assign(__assign({}, attribute), { costPerSchool: _this.calculateEventsAttributeCostOfProduction(attribute.noOfChanges, attribute), impressions: Math.round((noOfBoys + noOfGirls) *
                             0.9 *
                             attribute.opportunitiesToSee *
-                            attribute.quantity })); }) });
+                            attribute.quantity) })); }) });
             });
         };
         this.inventoryNOPAffectedBy = function (inventoryParentName) {
@@ -289,19 +294,25 @@ var WisrOptionService = /** @class */ (function () {
                         : 'ByNoOne';
         };
         this.calculateInventoriesAttributeCostOfProduction = function (multiplyBy, attribute, noOfBoys, noOfGirls, noOfTeachers, noOfClassroom) {
-            var SOP = attribute.units === 'feet' ? attribute.length * attribute.breadth : 1;
+            var SOP = attribute.units === 'feet'
+                ? (attribute.length > 0 ? attribute.length : attribute.height) *
+                    (attribute.breadth > 0 ? attribute.breadth : attribute.height)
+                : 1;
             var totalStudents = noOfBoys + noOfGirls;
             var NOP = multiplyBy === 'ByStudents'
-                ? attribute.quantity * totalStudents
+                ? totalStudents
                 : multiplyBy === 'ByTeachers'
-                    ? attribute.quantity * noOfTeachers
+                    ? noOfTeachers
                     : multiplyBy === 'ByClassrooms'
                         ? attribute.quantity * noOfClassroom
                         : attribute.quantity;
             return SOP * NOP * attribute.noOfChanges * attribute.materialCost;
         };
         this.calculateEventsAttributeCostOfProduction = function (noOfPlacement, attribute) {
-            var SOP = attribute.units === 'feet' ? attribute.length * attribute.breadth : 1;
+            var SOP = attribute.units === 'feet'
+                ? (attribute.length > 0 ? attribute.length : attribute.height) *
+                    (attribute.breadth > 0 ? attribute.breadth : attribute.height)
+                : 1;
             return SOP * attribute.quantity * attribute.materialCost;
         };
         this.calculateTotalImpressionsInASchool = function (inventories, events) {
@@ -339,12 +350,12 @@ var WisrOptionService = /** @class */ (function () {
                 ? minImpressionsSchoolData.impressions
                 : 0;
             var maxImpressions = lodash_1["default"].sumBy(schoolData, function (school) { return school.impressions; });
-            _this.$MinBudget.next(MinBudget);
-            _this.$MaxBudget.next(MaxBudget);
+            _this.$MinBudget.next(Math.round(MinBudget));
+            _this.$MaxBudget.next(Math.round(MaxBudget));
             _this.$MaxReach.next(maxReach);
             _this.$MinReach.next(minReach);
-            _this.$MaxImpressions.next(maxImpressions);
-            _this.$MinImpressions.next(minImpressions);
+            _this.$MaxImpressions.next(Math.round(maxImpressions));
+            _this.$MinImpressions.next(Math.round(minImpressions));
         };
         this.sortSchoolsByBudget = function (schoolData, orderBy) {
             return lodash_1["default"].orderBy(schoolData, [
@@ -360,12 +371,17 @@ var WisrOptionService = /** @class */ (function () {
                 function (school) { return school.totalNoOfBoys + school.totalNoOfGirls; },
             ], ['desc', 'desc', orderBy]);
         };
-        this.sortSchoolsByImpressions = function (schoolData, orderBy) {
+        this.sortSchoolsByInventoryAndEvents = function (schoolData, orderBy) {
+            return lodash_1["default"].orderBy(schoolData, [function (school) { return school.inventories.length; }, function (school) { return school.events.length; }], [orderBy, orderBy]);
+        };
+        this.sortSchoolsByReachForWisrOption = function (schoolData, orderBy) {
             return lodash_1["default"].orderBy(schoolData, [
-                function (school) { return school.events.length > 0; },
                 function (school) { return school.category; },
-                function (school) { return school.impressions; },
-            ], ['desc', 'asc', orderBy]);
+                function (school) { return school.totalNoOfBoys + school.totalNoOfGirls; },
+            ], ['desc', orderBy]);
+        };
+        this.sortSchoolsByImpressions = function (schoolData, orderBy) {
+            return lodash_1["default"].orderBy(schoolData, [function (school) { return school.category; }, function (school) { return school.impressions; }], ['desc', orderBy]);
         };
         this.categorizationOfSchool = function (schools) {
             _this.$CatASchool.next(lodash_1["default"].filter(schools, function (school) { return school.category === 'A'; }));
@@ -402,9 +418,9 @@ var WisrOptionService = /** @class */ (function () {
             var budget = lodash_1["default"].sumBy(schools, function (school) { return school.totalBrandOutlay; });
             var reach = lodash_1["default"].sumBy(schools, function (school) { return school.totalNoOfGirls + school.totalNoOfBoys; });
             var impressions = lodash_1["default"].sumBy(schools, function (school) { return school.impressions; });
-            _this.$GetBudget.next(budget);
+            _this.$GetBudget.next(Math.round(budget));
             _this.$GetReach.next(reach);
-            _this.$GetImpression.next(impressions);
+            _this.$GetImpression.next(Math.round(impressions));
             var calculateReach = reach + reach * _this.$PercentageIncreaseInReach.getValue();
             var IncreasedReach = calculateReach > _this.$MaxReach.getValue()
                 ? _this.$MaxReach.getValue()
@@ -421,9 +437,11 @@ var WisrOptionService = /** @class */ (function () {
                 WisrShare * _this.$PercentageDiscountInWISR.getValue();
             var reach = lodash_1["default"].sumBy(schools, function (school) { return school.totalNoOfGirls + school.totalNoOfBoys; });
             var impressions = lodash_1["default"].sumBy(schools, function (school) { return school.impressions; });
-            _this.$IncreasedBudget.next(finalBudget < grossRevenue ? grossRevenue : finalBudget);
+            _this.$IncreasedBudget.next(finalBudget < grossRevenue
+                ? Math.round(grossRevenue)
+                : Math.round(finalBudget));
             _this.$IncreasedReach.next(reach);
-            _this.$IncreasedImpressions.next(impressions);
+            _this.$IncreasedImpressions.next(Math.round(impressions));
         });
         this.$OptimizedSchool.next(this.mapWithTotalImpressionsAndCostPerSchool(this.$SchoolList.getValue()));
         this.$OptimizedSchool.subscribe(function (schools) {
@@ -455,9 +473,9 @@ var WisrOptionService = /** @class */ (function () {
         this.$SetReach.subscribe(function (setReach) {
             if (setReach >= _this.$MinReach.value &&
                 setReach <= _this.$MaxReach.value) {
-                var schoolsReach_2 = lodash_1["default"].sumBy(_this.$FilteredSchool.getValue(), function (school) { return school.totalNoOfGirls + school.totalNoOfBoys; });
-                if (schoolsReach_2 < setReach) {
-                    var schoolsAddedByReach = lodash_1["default"].takeWhile(_this.sortSchoolsByReach(lodash_1["default"].differenceBy(_this.$OptimizedSchool.getValue(), _this.$FilteredSchool.getValue(), function (school) { return school._id; }), 'asc'), function (school) {
+                var schoolsReach_2 = _this.$GetReach.getValue();
+                if (_this.$GetReach.getValue() < setReach) {
+                    var schoolsAddedByReach = lodash_1["default"].takeWhile(_this.sortSchoolsByReach(lodash_1["default"].differenceBy(_this.$OptimizedSchool.getValue(), _this.$FilteredSchool.getValue(), function (school) { return school._id; }), 'desc'), function (school) {
                         schoolsReach_2 += school.totalNoOfGirls + school.totalNoOfBoys;
                         return schoolsReach_2 <= setReach;
                     });
@@ -465,7 +483,7 @@ var WisrOptionService = /** @class */ (function () {
                 }
                 else {
                     var ElseSchoolsReach_1 = 0;
-                    var ElseSchoolsAddedByReach = lodash_1["default"].takeWhile(_this.sortSchoolsByReach(_this.$OptimizedSchool.getValue(), 'asc'), function (school) {
+                    var ElseSchoolsAddedByReach = lodash_1["default"].takeWhile(_this.sortSchoolsByInventoryAndEvents(_this.$FilteredSchool.getValue(), 'desc'), function (school) {
                         ElseSchoolsReach_1 += school.totalNoOfGirls + school.totalNoOfBoys;
                         return ElseSchoolsReach_1 <= setReach;
                     });
@@ -476,12 +494,22 @@ var WisrOptionService = /** @class */ (function () {
         this.$SetImpressions.subscribe(function (setImpressions) {
             if (setImpressions >= _this.$MinImpressions.value &&
                 setImpressions <= _this.$MaxImpressions.value) {
-                var schoolsImpressions_1 = lodash_1["default"].sumBy(_this.$FilteredSchool.getValue(), function (school) { return school.impressions; });
-                var schoolsAddedByImpressions = lodash_1["default"].takeWhile(_this.sortSchoolsByImpressions(lodash_1["default"].differenceBy(_this.$OptimizedSchool.getValue(), _this.$FilteredSchool.getValue(), function (school) { return school._id; }), 'asc'), function (school) {
-                    schoolsImpressions_1 += school.impressions;
-                    return schoolsImpressions_1 <= setImpressions;
-                });
-                _this.$FilteredSchool.next(lodash_1["default"].unionBy(_this.$FilteredSchool.getValue(), lodash_1["default"].uniqBy(schoolsAddedByImpressions, function (school) { return school._id; }), function (school) { return school._id; }));
+                var schoolsImpressions_1 = _this.$GetImpression.getValue();
+                if (_this.$GetImpression.getValue() < setImpressions) {
+                    var schoolsAddedByImpressions = lodash_1["default"].takeWhile(_this.sortSchoolsByImpressions(lodash_1["default"].differenceBy(_this.$OptimizedSchool.getValue(), _this.$FilteredSchool.getValue(), function (school) { return school._id; }), 'desc'), function (school) {
+                        schoolsImpressions_1 += school.impressions;
+                        return schoolsImpressions_1 <= setImpressions;
+                    });
+                    _this.$FilteredSchool.next(lodash_1["default"].unionBy(_this.$FilteredSchool.getValue(), lodash_1["default"].uniqBy(schoolsAddedByImpressions, function (school) { return school._id; }), function (school) { return school._id; }));
+                }
+                else {
+                    var ElseSchoolsImpressions_1 = 0;
+                    var ElseSchoolsAddedByImpressions = lodash_1["default"].takeWhile(_this.sortSchoolsByInventoryAndEvents(_this.$FilteredSchool.getValue(), 'desc'), function (school) {
+                        ElseSchoolsImpressions_1 += school.impressions;
+                        return ElseSchoolsImpressions_1 <= setImpressions;
+                    });
+                    _this.$FilteredSchool.next(lodash_1["default"].uniqBy(ElseSchoolsAddedByImpressions, function (school) { return school._id; }));
+                }
             }
         });
         this.$SetBudget.next(this.Data.campaignBudget);
@@ -503,9 +531,7 @@ var OrganizeSchool = /** @class */ (function () {
                     ? _this.CatA.push(school)
                     : school.category === 'B'
                         ? _this.CatB.push(school)
-                        : school.category === 'C'
-                            ? _this.CatC.push(school)
-                            : false;
+                        : school.category === 'C' && _this.CatC.push(school);
             });
         };
         this.shortSchoolData = function (schools) {
@@ -586,7 +612,11 @@ var OrganizeSchool = /** @class */ (function () {
         };
         this.filterSchoolData = function (schools, budget) {
             var Budget = 0;
-            return lodash_1["default"].takeWhile(schools, function (schools) {
+            return lodash_1["default"].takeWhile(lodash_1["default"].orderBy(schools, [
+                function (school) { return school.inventories.length; },
+                function (school) { return school.events.length; },
+                function (school) { return school.totalBrandOutlay; },
+            ], ['desc', 'desc', 'asc']), function (schools) {
                 Budget += schools.totalBrandOutlay;
                 return Budget <= budget;
             });
@@ -609,30 +639,35 @@ var OrganizeSchool = /** @class */ (function () {
         var finalBudgetA;
         var finalBudgetB;
         var finalBudgetC;
-        if (CatA > budgetA) {
-            finalBudgetA = budgetA;
+        if (CatA >= budgetA) {
+            this.CatA = this.filterSchoolData(schoolA, budgetA);
+            finalBudgetA = lodash_1["default"].sumBy(this.CatA, function (school) { return school.totalBrandOutlay; });
             this.ExtraBudget = CatA - finalBudgetA;
         }
         else {
-            finalBudgetA = CatA;
+            this.CatA = this.filterSchoolData(schoolA, CatA);
+            finalBudgetA = lodash_1["default"].sumBy(this.CatA, function (school) { return school.totalBrandOutlay; });
         }
-        if (CatB + this.ExtraBudget > budgetB) {
-            finalBudgetB = budgetB;
+        if (CatB + this.ExtraBudget >= budgetB) {
+            this.CatB = this.filterSchoolData(schoolB, budgetB);
+            finalBudgetB = lodash_1["default"].sumBy(this.CatB, function (school) { return school.totalBrandOutlay; });
             this.ExtraBudget = CatB + this.ExtraBudget - finalBudgetB;
         }
         else {
-            finalBudgetB = CatB + this.ExtraBudget;
+            this.CatB = this.filterSchoolData(schoolB, CatB + this.ExtraBudget);
+            finalBudgetB = lodash_1["default"].sumBy(this.CatB, function (school) { return school.totalBrandOutlay; });
+            this.ExtraBudget = CatB + this.ExtraBudget - finalBudgetB;
         }
-        if (CatC + this.ExtraBudget > budgetC) {
-            finalBudgetC = budgetC;
+        if (CatC + this.ExtraBudget >= budgetC) {
+            this.CatC = this.filterSchoolData(schoolC, budgetC);
+            finalBudgetC = lodash_1["default"].sumBy(this.CatC, function (school) { return school.totalBrandOutlay; });
             this.ExtraBudget = CatC + this.ExtraBudget - finalBudgetC;
         }
         else {
-            finalBudgetC = CatC + this.ExtraBudget;
+            this.CatC = this.filterSchoolData(schoolC, CatC + this.ExtraBudget);
+            finalBudgetC = lodash_1["default"].sumBy(this.CatC, function (school) { return school.totalBrandOutlay; });
+            this.ExtraBudget = CatC + this.ExtraBudget - finalBudgetC;
         }
-        this.CatA = this.filterSchoolData(schoolA, finalBudgetA);
-        this.CatB = this.filterSchoolData(schoolB, finalBudgetB);
-        this.CatC = this.filterSchoolData(schoolC, finalBudgetC);
     }
     return OrganizeSchool;
 }());

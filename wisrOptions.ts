@@ -91,6 +91,11 @@ export interface FinalSchool {
 	totalBrandOutlay: number;
 	impressions: number;
 	costPerSchool: number;
+	address: string;
+	pinCode: string;
+	state: string;
+	floors: number;
+	city: string;
 }
 
 interface BudgetRatio {
@@ -131,9 +136,9 @@ export class WisrOptionService {
 	public $PercentageDiscountInWISR = new BehaviorSubject<number>(0.1);
 	public $InventoriesNames = new BehaviorSubject<string[]>([]);
 	public $EventsNames = new BehaviorSubject<string[]>([]);
-	public $SetBudget = new BehaviorSubject<number>(3000000);
+	public $SetBudget = new BehaviorSubject<number>(0);
 	public $GetBudget = new BehaviorSubject<number>(0);
-	public $CampaignDurationInDays = new BehaviorSubject<number>(100);
+	public $CampaignDurationInDays = new BehaviorSubject<number>(0);
 	public $SetReach = new BehaviorSubject<number>(0);
 	public $GetReach = new BehaviorSubject<number>(0);
 	public $SetImpressions = new BehaviorSubject<number>(0);
@@ -142,7 +147,7 @@ export class WisrOptionService {
 	public $CatASchool = new BehaviorSubject<FinalSchool[]>([]);
 	public $CatBSchool = new BehaviorSubject<FinalSchool[]>([]);
 	public $CatCSchool = new BehaviorSubject<FinalSchool[]>([]);
-	public $NoOfDaysInYear = new BehaviorSubject<number>(210);
+	public $NoOfDaysInYear = new BehaviorSubject<number>(365);
 	public $MinBudget = new BehaviorSubject<number>(0);
 	public $MaxBudget = new BehaviorSubject<number>(0);
 	public $IncreasedBudget = new BehaviorSubject<number>(0);
@@ -201,9 +206,9 @@ export class WisrOptionService {
 				(school) => school.totalNoOfGirls + school.totalNoOfBoys
 			);
 			const impressions = _.sumBy(schools, (school) => school.impressions);
-			this.$GetBudget.next(budget);
+			this.$GetBudget.next(Math.round(budget));
 			this.$GetReach.next(reach);
-			this.$GetImpression.next(impressions);
+			this.$GetImpression.next(Math.round(impressions));
 			const calculateReach =
 				reach + reach * this.$PercentageIncreaseInReach.getValue();
 			const IncreasedReach =
@@ -233,10 +238,12 @@ export class WisrOptionService {
 			);
 			const impressions = _.sumBy(schools, (school) => school.impressions);
 			this.$IncreasedBudget.next(
-				finalBudget < grossRevenue ? grossRevenue : finalBudget
+				finalBudget < grossRevenue
+					? Math.round(grossRevenue)
+					: Math.round(finalBudget)
 			);
 			this.$IncreasedReach.next(reach);
-			this.$IncreasedImpressions.next(impressions);
+			this.$IncreasedImpressions.next(Math.round(impressions));
 		});
 		this.$OptimizedSchool.next(
 			this.mapWithTotalImpressionsAndCostPerSchool(this.$SchoolList.getValue())
@@ -277,11 +284,8 @@ export class WisrOptionService {
 				setReach >= this.$MinReach.value &&
 				setReach <= this.$MaxReach.value
 			) {
-				let schoolsReach: number = _.sumBy(
-					this.$FilteredSchool.getValue(),
-					(school) => school.totalNoOfGirls + school.totalNoOfBoys
-				);
-				if (schoolsReach < setReach) {
+				let schoolsReach: number = this.$GetReach.getValue();
+				if (this.$GetReach.getValue() < setReach) {
 					let schoolsAddedByReach: FinalSchool[] = _.takeWhile(
 						this.sortSchoolsByReach(
 							_.differenceBy(
@@ -289,7 +293,7 @@ export class WisrOptionService {
 								this.$FilteredSchool.getValue(),
 								(school) => school._id
 							),
-							'asc'
+							'desc'
 						),
 						(school) => {
 							schoolsReach += school.totalNoOfGirls + school.totalNoOfBoys;
@@ -306,7 +310,10 @@ export class WisrOptionService {
 				} else {
 					let ElseSchoolsReach = 0;
 					let ElseSchoolsAddedByReach: FinalSchool[] = _.takeWhile(
-						this.sortSchoolsByReach(this.$OptimizedSchool.getValue(), 'asc'),
+						this.sortSchoolsByInventoryAndEvents(
+							this.$FilteredSchool.getValue(),
+							'desc'
+						),
 						(school) => {
 							ElseSchoolsReach += school.totalNoOfGirls + school.totalNoOfBoys;
 							return ElseSchoolsReach <= setReach;
@@ -323,31 +330,45 @@ export class WisrOptionService {
 				setImpressions >= this.$MinImpressions.value &&
 				setImpressions <= this.$MaxImpressions.value
 			) {
-				let schoolsImpressions: number = _.sumBy(
-					this.$FilteredSchool.getValue(),
-					(school) => school.impressions
-				);
-				let schoolsAddedByImpressions: FinalSchool[] = _.takeWhile(
-					this.sortSchoolsByImpressions(
-						_.differenceBy(
-							this.$OptimizedSchool.getValue(),
-							this.$FilteredSchool.getValue(),
-							(school) => school._id
+				let schoolsImpressions: number = this.$GetImpression.getValue();
+				if (this.$GetImpression.getValue() < setImpressions) {
+					let schoolsAddedByImpressions: FinalSchool[] = _.takeWhile(
+						this.sortSchoolsByImpressions(
+							_.differenceBy(
+								this.$OptimizedSchool.getValue(),
+								this.$FilteredSchool.getValue(),
+								(school) => school._id
+							),
+							'desc'
 						),
-						'asc'
-					),
-					(school) => {
-						schoolsImpressions += school.impressions;
-						return schoolsImpressions <= setImpressions;
-					}
-				);
-				this.$FilteredSchool.next(
-					_.unionBy(
-						this.$FilteredSchool.getValue(),
-						_.uniqBy(schoolsAddedByImpressions, (school) => school._id),
-						(school) => school._id
-					)
-				);
+						(school) => {
+							schoolsImpressions += school.impressions;
+							return schoolsImpressions <= setImpressions;
+						}
+					);
+					this.$FilteredSchool.next(
+						_.unionBy(
+							this.$FilteredSchool.getValue(),
+							_.uniqBy(schoolsAddedByImpressions, (school) => school._id),
+							(school) => school._id
+						)
+					);
+				} else {
+					let ElseSchoolsImpressions = 0;
+					let ElseSchoolsAddedByImpressions: FinalSchool[] = _.takeWhile(
+						this.sortSchoolsByInventoryAndEvents(
+							this.$FilteredSchool.getValue(),
+							'desc'
+						),
+						(school) => {
+							ElseSchoolsImpressions += school.impressions;
+							return ElseSchoolsImpressions <= setImpressions;
+						}
+					);
+					this.$FilteredSchool.next(
+						_.uniqBy(ElseSchoolsAddedByImpressions, (school) => school._id)
+					);
+				}
 			}
 		});
 		this.$SetBudget.next(this.Data.campaignBudget);
@@ -366,7 +387,7 @@ export class WisrOptionService {
 				(school) => school.totalNoOfGirls + school.totalNoOfBoys
 			);
 			let schoolsAddedByReach: FinalSchool[] = _.takeWhile(
-				this.sortSchoolsByReach(
+				this.sortSchoolsByReachForWisrOption(
 					_.filter(
 						_.differenceBy(
 							FilteredSchools,
@@ -377,7 +398,7 @@ export class WisrOptionService {
 							school.totalNoOfGirls + school.totalNoOfBoys <=
 							IncreasedReach - schoolsReach
 					),
-					'asc'
+					'desc'
 				),
 				(school) => {
 					schoolsReach += school.totalNoOfGirls + school.totalNoOfBoys;
@@ -417,6 +438,11 @@ export class WisrOptionService {
 			schoolName: school.schoolName,
 			category: school.category,
 			noOfTeachers: school.noOfTeachers,
+			pinCode: school.pincode,
+			city: school.city,
+			address: school.address,
+			state: school.state,
+			floors: school.floors,
 			classrooms: this.FilterClassroomBySchoolId(school._id),
 			inventories: this.FilterInventoryBySchoolId(school._id),
 			events: this.FilterEventBySchoolId(school._id),
@@ -493,9 +519,9 @@ export class WisrOptionService {
 				AttributeObj._id &&
 				AttributeObj.name &&
 				AttributeObj.units &&
-				AttributeObj.length &&
-				AttributeObj.breadth &&
-				AttributeObj.height &&
+				((AttributeObj.length && AttributeObj.breadth) ||
+					(AttributeObj.length && AttributeObj.height) ||
+					(AttributeObj.breadth && AttributeObj.height)) &&
 				AttributeObj.inventory &&
 				AttributeObj.opportunitiesToSee &&
 				AttributeObj.materialCost &&
@@ -506,9 +532,9 @@ export class WisrOptionService {
 			_id: Attribute._id,
 			name: Attribute.name,
 			units: Attribute.units,
-			length: Attribute.length,
-			breadth: Attribute.breadth,
-			height: Attribute.height,
+			length: Attribute.length <= 0 ? 1 : Attribute.length,
+			breadth: Attribute.breadth <= 0 ? 1 : Attribute.breadth,
+			height: Attribute.height <= 0 ? 1 : Attribute.height,
 			inventory: Attribute.inventory,
 			opportunitiesToSee: Attribute.opportunitiesToSee,
 			materialCost: Attribute.materialCost,
@@ -527,10 +553,10 @@ export class WisrOptionService {
 		);
 	};
 	private SetBrandOutlayByDuration = (brandOutlay: number) => {
-		return (
+		return Math.round(
 			brandOutlay /
-			(this.$NoOfDaysInYear.getValue() /
-				this.$CampaignDurationInDays.getValue())
+				(this.$NoOfDaysInYear.getValue() /
+					this.$CampaignDurationInDays.getValue())
 		);
 	};
 	private FilterEventBySchoolId = (schoolId: string) => {
@@ -564,9 +590,9 @@ export class WisrOptionService {
 				AttributeObj._id &&
 				AttributeObj.name &&
 				AttributeObj.units &&
-				AttributeObj.length &&
-				AttributeObj.breadth &&
-				AttributeObj.height &&
+				((AttributeObj.length && AttributeObj.breadth) ||
+					(AttributeObj.length && AttributeObj.height) ||
+					(AttributeObj.breadth && AttributeObj.height)) &&
 				AttributeObj.opportunitiesToSee &&
 				AttributeObj.materialCost &&
 				AttributeObj.quantity &&
@@ -575,18 +601,16 @@ export class WisrOptionService {
 			_id: Attribute._id,
 			name: Attribute.name,
 			units: Attribute.units,
-			length: Attribute.length,
-			breadth: Attribute.breadth,
-			height: Attribute.height,
+			length: Attribute.length <= 0 ? 1 : Attribute.length,
+			breadth: Attribute.breadth <= 0 ? 1 : Attribute.breadth,
+			height: Attribute.height <= 0 ? 1 : Attribute.height,
 			opportunitiesToSee: Attribute.opportunitiesToSee,
 			materialCost: Attribute.materialCost,
 			noOfChangesYearly: Attribute.noOfChangesYearly,
 			quantity: Attribute.quantity,
 			noOfChanges: this.SetNoOfChanges(Attribute.noOfChangesYearly),
 			brandOutlay: Attribute.brandOutlay,
-			brandOutlayByDuration: this.SetBrandOutlayByDuration(
-				Attribute.brandOutlay
-			),
+			brandOutlayByDuration: Attribute.brandOutlay,
 		}));
 	};
 	private mapSchoolWithReachDataAndBrandOutlay = (schoolData: any[]) => {
@@ -677,13 +701,14 @@ export class WisrOptionService {
 							noOfTeachers,
 							noOfClassroom
 						) + internalCostPerAttribute,
-					impressions:
+					impressions: Math.round(
 						multiplyBy === 'ByTeachers'
 							? noOfTeachers * 0.95 + this.$CampaignDurationInDays.getValue()
 							: (noOfBoys + noOfGirls) *
-							  0.9 *
-							  this.$CampaignDurationInDays.getValue() *
-							  attribute.opportunitiesToSee,
+									0.9 *
+									this.$CampaignDurationInDays.getValue() *
+									attribute.opportunitiesToSee
+					),
 				})),
 			};
 		});
@@ -704,11 +729,12 @@ export class WisrOptionService {
 						attribute.noOfChanges,
 						attribute
 					),
-					impressions:
+					impressions: Math.round(
 						(noOfBoys + noOfGirls) *
-						0.9 *
-						attribute.opportunitiesToSee *
-						attribute.quantity,
+							0.9 *
+							attribute.opportunitiesToSee *
+							attribute.quantity
+					),
 				})),
 			};
 		});
@@ -740,13 +766,16 @@ export class WisrOptionService {
 		noOfClassroom: number
 	) => {
 		const SOP =
-			attribute.units === 'feet' ? attribute.length * attribute.breadth : 1;
+			attribute.units === 'feet'
+				? (attribute.length > 0 ? attribute.length : attribute.height) *
+				  (attribute.breadth > 0 ? attribute.breadth : attribute.height)
+				: 1;
 		const totalStudents = noOfBoys + noOfGirls;
 		const NOP =
 			multiplyBy === 'ByStudents'
-				? attribute.quantity * totalStudents
+				? totalStudents
 				: multiplyBy === 'ByTeachers'
-				? attribute.quantity * noOfTeachers
+				? noOfTeachers
 				: multiplyBy === 'ByClassrooms'
 				? attribute.quantity * noOfClassroom
 				: attribute.quantity;
@@ -757,7 +786,10 @@ export class WisrOptionService {
 		attribute: EventAttribute
 	) => {
 		const SOP =
-			attribute.units === 'feet' ? attribute.length * attribute.breadth : 1;
+			attribute.units === 'feet'
+				? (attribute.length > 0 ? attribute.length : attribute.height) *
+				  (attribute.breadth > 0 ? attribute.breadth : attribute.height)
+				: 1;
 		return SOP * attribute.quantity * attribute.materialCost;
 	};
 	private calculateTotalImpressionsInASchool = (
@@ -829,12 +861,12 @@ export class WisrOptionService {
 			? minImpressionsSchoolData.impressions
 			: 0;
 		const maxImpressions = _.sumBy(schoolData, (school) => school.impressions);
-		this.$MinBudget.next(MinBudget);
-		this.$MaxBudget.next(MaxBudget);
+		this.$MinBudget.next(Math.round(MinBudget));
+		this.$MaxBudget.next(Math.round(MaxBudget));
 		this.$MaxReach.next(maxReach);
 		this.$MinReach.next(minReach);
-		this.$MaxImpressions.next(maxImpressions);
-		this.$MinImpressions.next(minImpressions);
+		this.$MaxImpressions.next(Math.round(maxImpressions));
+		this.$MinImpressions.next(Math.round(minImpressions));
 	};
 	private sortSchoolsByBudget = (
 		schoolData: FinalSchool[],
@@ -864,18 +896,39 @@ export class WisrOptionService {
 			['desc', 'desc', orderBy]
 		);
 	};
-	private sortSchoolsByImpressions = (
+
+	private sortSchoolsByInventoryAndEvents = (
+		schoolData: FinalSchool[],
+		orderBy: 'asc' | 'desc'
+	) => {
+		return _.orderBy(
+			schoolData,
+			[(school) => school.inventories.length, (school) => school.events.length],
+			[orderBy, orderBy]
+		);
+	};
+	private sortSchoolsByReachForWisrOption = (
 		schoolData: FinalSchool[],
 		orderBy: 'asc' | 'desc'
 	) => {
 		return _.orderBy(
 			schoolData,
 			[
-				(school) => school.events.length > 0,
 				(school) => school.category,
-				(school) => school.impressions,
+				(school) => school.totalNoOfBoys + school.totalNoOfGirls,
 			],
-			['desc', 'asc', orderBy]
+			['desc', orderBy]
+		);
+	};
+
+	private sortSchoolsByImpressions = (
+		schoolData: FinalSchool[],
+		orderBy: 'asc' | 'desc'
+	) => {
+		return _.orderBy(
+			schoolData,
+			[(school) => school.category, (school) => school.impressions],
+			['desc', orderBy]
 		);
 	};
 	private categorizationOfSchool = (schools: FinalSchool[]) => {
@@ -890,20 +943,17 @@ export class WisrOptionService {
 		);
 	};
 }
-
 interface OrganiseSchool {
 	Schools: FinalSchool[];
 	InventoriesNames: string[];
 	EventsNames: string[];
 	BudgetData: BudgetData;
 }
-
 interface BudgetData {
 	CatA: number;
 	CatB: number;
 	CatC: number;
 }
-
 class OrganizeSchool {
 	public CatA: FinalSchool[] = [];
 	public CatB: FinalSchool[] = [];
@@ -923,27 +973,34 @@ class OrganizeSchool {
 		let finalBudgetA: number;
 		let finalBudgetB: number;
 		let finalBudgetC: number;
-		if (CatA > budgetA) {
-			finalBudgetA = budgetA;
+		if (CatA >= budgetA) {
+			this.CatA = this.filterSchoolData(schoolA, budgetA);
+			finalBudgetA = _.sumBy(this.CatA, (school) => school.totalBrandOutlay);
 			this.ExtraBudget = CatA - finalBudgetA;
 		} else {
-			finalBudgetA = CatA;
+			this.CatA = this.filterSchoolData(schoolA, CatA);
+			finalBudgetA = _.sumBy(this.CatA, (school) => school.totalBrandOutlay);
 		}
-		if (CatB + this.ExtraBudget > budgetB) {
-			finalBudgetB = budgetB;
+
+		if (CatB + this.ExtraBudget >= budgetB) {
+			this.CatB = this.filterSchoolData(schoolB, budgetB);
+			finalBudgetB = _.sumBy(this.CatB, (school) => school.totalBrandOutlay);
 			this.ExtraBudget = CatB + this.ExtraBudget - finalBudgetB;
 		} else {
-			finalBudgetB = CatB + this.ExtraBudget;
+			this.CatB = this.filterSchoolData(schoolB, CatB + this.ExtraBudget);
+			finalBudgetB = _.sumBy(this.CatB, (school) => school.totalBrandOutlay);
+			this.ExtraBudget = CatB + this.ExtraBudget - finalBudgetB;
 		}
-		if (CatC + this.ExtraBudget > budgetC) {
-			finalBudgetC = budgetC;
+
+		if (CatC + this.ExtraBudget >= budgetC) {
+			this.CatC = this.filterSchoolData(schoolC, budgetC);
+			finalBudgetC = _.sumBy(this.CatC, (school) => school.totalBrandOutlay);
 			this.ExtraBudget = CatC + this.ExtraBudget - finalBudgetC;
 		} else {
-			finalBudgetC = CatC + this.ExtraBudget;
+			this.CatC = this.filterSchoolData(schoolC, CatC + this.ExtraBudget);
+			finalBudgetC = _.sumBy(this.CatC, (school) => school.totalBrandOutlay);
+			this.ExtraBudget = CatC + this.ExtraBudget - finalBudgetC;
 		}
-		this.CatA = this.filterSchoolData(schoolA, finalBudgetA);
-		this.CatB = this.filterSchoolData(schoolB, finalBudgetB);
-		this.CatC = this.filterSchoolData(schoolC, finalBudgetC);
 	}
 
 	private filterSchoolByCategory = (schools: FinalSchool[]) => {
@@ -952,9 +1009,7 @@ class OrganizeSchool {
 				? this.CatA.push(school)
 				: school.category === 'B'
 				? this.CatB.push(school)
-				: school.category === 'C'
-				? this.CatC.push(school)
-				: false;
+				: school.category === 'C' && this.CatC.push(school);
 		});
 	};
 
@@ -1063,10 +1118,21 @@ class OrganizeSchool {
 
 	private filterSchoolData = (schools: FinalSchool[], budget: number) => {
 		let Budget = 0;
-		return _.takeWhile(schools, (schools) => {
-			Budget += schools.totalBrandOutlay;
-			return Budget <= budget;
-		});
+		return _.takeWhile(
+			_.orderBy(
+				schools,
+				[
+					(school) => school.inventories.length,
+					(school) => school.events.length,
+					(school) => school.totalBrandOutlay,
+				],
+				['desc', 'desc', 'asc']
+			),
+			(schools) => {
+				Budget += schools.totalBrandOutlay;
+				return Budget <= budget;
+			}
+		);
 	};
 
 	private schoolEventsList = (school: FinalSchool) => {
