@@ -287,7 +287,7 @@ export class WisrOptionService {
 				let schoolsReach: number = this.$GetReach.getValue();
 				if (this.$GetReach.getValue() < setReach) {
 					let schoolsAddedByReach: FinalSchool[] = _.takeWhile(
-						this.sortSchoolsByReach(
+						this.sortSchoolsByInventoryAndEvents(
 							_.differenceBy(
 								this.$OptimizedSchool.getValue(),
 								this.$FilteredSchool.getValue(),
@@ -331,9 +331,9 @@ export class WisrOptionService {
 				setImpressions <= this.$MaxImpressions.value
 			) {
 				let schoolsImpressions: number = this.$GetImpression.getValue();
-				if (this.$GetImpression.getValue() < setImpressions) {
+				if (schoolsImpressions < setImpressions) {
 					let schoolsAddedByImpressions: FinalSchool[] = _.takeWhile(
-						this.sortSchoolsByImpressions(
+						this.sortSchoolsByInventoryAndEvents(
 							_.differenceBy(
 								this.$OptimizedSchool.getValue(),
 								this.$FilteredSchool.getValue(),
@@ -868,6 +868,7 @@ export class WisrOptionService {
 		this.$MaxImpressions.next(Math.round(maxImpressions));
 		this.$MinImpressions.next(Math.round(minImpressions));
 	};
+
 	private sortSchoolsByBudget = (
 		schoolData: FinalSchool[],
 		orderBy: 'asc' | 'desc'
@@ -875,7 +876,7 @@ export class WisrOptionService {
 		return _.orderBy(
 			schoolData,
 			[
-				(school) => school.events.length > 0,
+				(school) => school.events.length,
 				(school) => school.category,
 				(school) => school.totalBrandOutlay,
 			],
@@ -889,21 +890,19 @@ export class WisrOptionService {
 		return _.orderBy(
 			schoolData,
 			[
-				(school) => school.events.length > 0,
 				(school) => school.category,
 				(school) => school.totalNoOfBoys + school.totalNoOfGirls,
 			],
-			['desc', 'desc', orderBy]
+			['desc', orderBy]
 		);
 	};
-
 	private sortSchoolsByInventoryAndEvents = (
 		schoolData: FinalSchool[],
 		orderBy: 'asc' | 'desc'
 	) => {
 		return _.orderBy(
 			schoolData,
-			[(school) => school.inventories.length, (school) => school.events.length],
+			[(school) => school.events.length, (school) => school.inventories.length],
 			[orderBy, orderBy]
 		);
 	};
@@ -916,11 +915,11 @@ export class WisrOptionService {
 			[
 				(school) => school.category,
 				(school) => school.totalNoOfBoys + school.totalNoOfGirls,
+				(school) => school.totalBrandOutlay,
 			],
-			['desc', orderBy]
+			['desc', orderBy, 'asc']
 		);
 	};
-
 	private sortSchoolsByImpressions = (
 		schoolData: FinalSchool[],
 		orderBy: 'asc' | 'desc'
@@ -1112,32 +1111,70 @@ class OrganizeSchool {
 				!eventsCheck && eventsList.length > 0 && inventoriesList.length === 0
 			);
 		});
+		EI = _.orderBy(
+			EI,
+			[
+				(schools) => schools.events.length,
+				(schools) => schools.inventories.length,
+			],
+			['desc', 'desc']
+		);
+		ei = _.orderBy(
+			ei,
+			[(school) => school.events.length, (school) => school.inventories.length],
+			['desc', 'desc']
+		);
 
 		return _.concat(EI, ei, I, i, E, e);
 	};
 
 	private filterSchoolData = (schools: FinalSchool[], budget: number) => {
 		let Budget = 0;
-		return _.takeWhile(
+		const schoolsByPriority = _.takeWhile(schools, (school) => {
+			Budget += school.totalBrandOutlay;
+			return Budget <= budget;
+		});
+		Budget = _.sumBy(schoolsByPriority, (school) => school.totalBrandOutlay);
+
+		const schoolsByReach = _.takeWhile(
 			_.orderBy(
-				schools,
-				[
-					(school) => school.inventories.length,
-					(school) => school.events.length,
-					(school) => school.totalBrandOutlay,
-				],
-				['desc', 'desc', 'asc']
+				_.differenceBy(schools, schoolsByPriority, (school) => school._id),
+				[(school) => school.totalNoOfBoys + school.totalNoOfGirls],
+				['desc']
 			),
-			(schools) => {
-				Budget += schools.totalBrandOutlay;
+			(school) => {
+				Budget += school.totalBrandOutlay;
 				return Budget <= budget;
 			}
 		);
+
+		Budget = _.sum([
+			_.sumBy(schoolsByReach, (school) => school.totalBrandOutlay),
+			_.sumBy(schoolsByPriority, (school) => school.totalBrandOutlay),
+		]);
+
+		const schoolsByBudget = _.takeWhile(
+			_.orderBy(
+				_.differenceBy(
+					schools,
+					[...schoolsByPriority, ...schoolsByReach],
+					(school) => school._id
+				),
+				[(school) => school.totalBrandOutlay],
+				['asc']
+			),
+			(school) => {
+				Budget += school.totalBrandOutlay;
+				return Budget <= budget;
+			}
+		);
+		return _.concat(schoolsByPriority, schoolsByReach, schoolsByBudget);
 	};
 
 	private schoolEventsList = (school: FinalSchool) => {
 		return _.map(school.events, (event) => event.name);
 	};
+
 	private schoolInventoriesList = (school: FinalSchool) => {
 		return _.map(school.inventories, (inventory) => inventory.parentName);
 	};
