@@ -1,6 +1,7 @@
 import { BehaviorSubject } from 'rxjs';
 import _ from 'lodash';
 
+export type TargetAudience = 'boys' | 'co-ed' | 'girls';
 export type MultiplyBy =
 	| 'ByStudents'
 	| 'ByTeachers'
@@ -88,6 +89,7 @@ export interface FinalSchool {
 	events: EventInterface[];
 	totalNoOfBoys: number;
 	totalNoOfGirls: number;
+	reach: number;
 	totalBrandOutlay: number;
 	impressions: number;
 	costPerSchool: number;
@@ -117,6 +119,7 @@ export interface WisrOptionServiceInterface {
 	InventoriesNames: string[];
 	EventsNames: string[];
 	noOfDaysInYear: number;
+	TargetAudience: TargetAudience;
 }
 
 export class WisrOptionService {
@@ -132,6 +135,7 @@ export class WisrOptionService {
 	public $ClassroomList = new BehaviorSubject<any[]>([]);
 	public $InventoryList = new BehaviorSubject<any[]>([]);
 	public $EventList = new BehaviorSubject<any[]>([]);
+	public $TargetAudience = new BehaviorSubject<TargetAudience>('co-ed');
 	public $PercentageIncreaseInReach = new BehaviorSubject<number>(0.3);
 	public $PercentageDiscountInWISR = new BehaviorSubject<number>(0.1);
 	public $InventoriesNames = new BehaviorSubject<string[]>([]);
@@ -172,6 +176,7 @@ export class WisrOptionService {
 
 	constructor(private Data: WisrOptionServiceInterface) {
 		this.$BudgetRatio.next(this.Data.budgetRatio);
+		this.$TargetAudience.next(this.Data.TargetAudience);
 		this.$SchoolList.next(this.Data.schoolData);
 		this.$ClassroomList.next(this.Data.classroomData);
 		this.$InventoryList.next(this.Data.inventoryData);
@@ -201,14 +206,11 @@ export class WisrOptionService {
 		});
 		this.$FilteredSchool.subscribe((schools) => {
 			const budget = _.sumBy(schools, (school) => school.totalBrandOutlay);
-			const reach = _.sumBy(
-				schools,
-				(school) => school.totalNoOfGirls + school.totalNoOfBoys
-			);
+			const reach = _.sumBy(schools, (school) => school.reach);
 			const impressions = _.sumBy(schools, (school) => school.impressions);
-			this.$GetBudget.next(Math.round(budget));
+			this.$GetBudget.next(Math.ceil(budget));
 			this.$GetReach.next(reach);
-			this.$GetImpression.next(Math.round(impressions));
+			this.$GetImpression.next(Math.ceil(impressions));
 			const calculateReach =
 				reach + reach * this.$PercentageIncreaseInReach.getValue();
 			const IncreasedReach =
@@ -232,18 +234,15 @@ export class WisrOptionService {
 				SchoolShare +
 				WisrShare -
 				WisrShare * this.$PercentageDiscountInWISR.getValue();
-			const reach = _.sumBy(
-				schools,
-				(school) => school.totalNoOfGirls + school.totalNoOfBoys
-			);
+			const reach = _.sumBy(schools, (school) => school.reach);
 			const impressions = _.sumBy(schools, (school) => school.impressions);
 			this.$IncreasedBudget.next(
 				finalBudget < grossRevenue
-					? Math.round(grossRevenue)
-					: Math.round(finalBudget)
+					? Math.ceil(grossRevenue)
+					: Math.ceil(finalBudget)
 			);
 			this.$IncreasedReach.next(reach);
-			this.$IncreasedImpressions.next(Math.round(impressions));
+			this.$IncreasedImpressions.next(Math.ceil(impressions));
 		});
 		this.$OptimizedSchool.next(
 			this.mapWithTotalImpressionsAndCostPerSchool(this.$SchoolList.getValue())
@@ -285,7 +284,7 @@ export class WisrOptionService {
 				setReach <= this.$MaxReach.value
 			) {
 				let schoolsReach: number = this.$GetReach.getValue();
-				if (this.$GetReach.getValue() < setReach) {
+				if (schoolsReach < setReach) {
 					let schoolsAddedByReach: FinalSchool[] = _.takeWhile(
 						this.sortSchoolsByInventoryAndEvents(
 							_.differenceBy(
@@ -296,7 +295,7 @@ export class WisrOptionService {
 							'desc'
 						),
 						(school) => {
-							schoolsReach += school.totalNoOfGirls + school.totalNoOfBoys;
+							schoolsReach += school.reach;
 							return schoolsReach <= setReach;
 						}
 					);
@@ -315,7 +314,7 @@ export class WisrOptionService {
 							'desc'
 						),
 						(school) => {
-							ElseSchoolsReach += school.totalNoOfGirls + school.totalNoOfBoys;
+							ElseSchoolsReach += school.reach;
 							return ElseSchoolsReach <= setReach;
 						}
 					);
@@ -384,7 +383,7 @@ export class WisrOptionService {
 		) {
 			let schoolsReach: number = _.sumBy(
 				this.$FilteredSchool.getValue(),
-				(school) => school.totalNoOfGirls + school.totalNoOfBoys
+				(school) => school.reach
 			);
 			let schoolsAddedByReach: FinalSchool[] = _.takeWhile(
 				this.sortSchoolsByReachForWisrOption(
@@ -394,14 +393,12 @@ export class WisrOptionService {
 							this.$FilteredSchool.getValue(),
 							(school) => school._id
 						),
-						(school) =>
-							school.totalNoOfGirls + school.totalNoOfBoys <=
-							IncreasedReach - schoolsReach
+						(school) => school.reach <= IncreasedReach - schoolsReach
 					),
 					'desc'
 				),
 				(school) => {
-					schoolsReach += school.totalNoOfGirls + school.totalNoOfBoys;
+					schoolsReach += school.reach;
 					return schoolsReach <= IncreasedReach;
 				}
 			);
@@ -549,11 +546,12 @@ export class WisrOptionService {
 	};
 	private SetNoOfChanges = (noOfChangesYearly: number) => {
 		return Math.ceil(
-			this.$CampaignDurationInDays.getValue() / (365 / noOfChangesYearly)
+			this.$CampaignDurationInDays.getValue() /
+				(this.$NoOfDaysInYear.getValue() / noOfChangesYearly)
 		);
 	};
 	private SetBrandOutlayByDuration = (brandOutlay: number) => {
-		return Math.round(
+		return Math.ceil(
 			brandOutlay /
 				(this.$NoOfDaysInYear.getValue() /
 					this.$CampaignDurationInDays.getValue())
@@ -614,15 +612,27 @@ export class WisrOptionService {
 		}));
 	};
 	private mapSchoolWithReachDataAndBrandOutlay = (schoolData: any[]) => {
-		return this.OptimizeSchoolData(schoolData).map((school) => ({
-			...school,
-			totalNoOfBoys: this.calculateTotalBoysInASchool(school.classrooms),
-			totalNoOfGirls: this.calculateTotalGirlsInASchool(school.classrooms),
-			totalBrandOutlay: this.calculateTotalBrandOutlayInASchool(
+		return this.OptimizeSchoolData(schoolData).map((school) => {
+			const totalNoOfBoys = this.calculateTotalBoysInASchool(school.classrooms);
+			const totalNoOfGirls = this.calculateTotalGirlsInASchool(
+				school.classrooms
+			);
+			const reach = this.getReachWithTargetAudience(
+				totalNoOfBoys,
+				totalNoOfGirls
+			);
+			const totalBrandOutlay = this.calculateTotalBrandOutlayInASchool(
 				school.inventories,
 				school.events
-			),
-		})) as unknown as FinalSchool[];
+			);
+			return {
+				...school,
+				totalNoOfBoys,
+				totalNoOfGirls,
+				reach,
+				totalBrandOutlay,
+			};
+		}) as unknown as FinalSchool[];
 	};
 	private calculateTotalBoysInASchool = (classrooms: ClassroomInterface[]) => {
 		return _.sumBy(classrooms, (classroom) => classroom.boys);
@@ -655,15 +665,13 @@ export class WisrOptionService {
 				...school,
 				inventories: this.calculateInventoriesCostPerSchoolAndImpression(
 					school.inventories,
-					school.totalNoOfBoys,
-					school.totalNoOfGirls,
+					school.reach,
 					school.noOfTeachers,
 					school.classrooms.length
 				),
 				events: this.calculateEventsCostPerSchoolAndImpression(
 					school.events,
-					school.totalNoOfBoys,
-					school.totalNoOfGirls,
+					school.reach,
 					school.noOfTeachers,
 					school.classrooms.length
 				),
@@ -672,8 +680,7 @@ export class WisrOptionService {
 	};
 	private calculateInventoriesCostPerSchoolAndImpression = (
 		inventories: InventoryInterface[],
-		noOfBoys: number,
-		noOfGirls: number,
+		reach: number,
 		noOfTeachers: number,
 		noOfClassroom: number
 	) => {
@@ -696,15 +703,14 @@ export class WisrOptionService {
 						this.calculateInventoriesAttributeCostOfProduction(
 							multiplyBy,
 							attribute,
-							noOfBoys,
-							noOfGirls,
+							reach,
 							noOfTeachers,
 							noOfClassroom
 						) + internalCostPerAttribute,
-					impressions: Math.round(
+					impressions: Math.ceil(
 						multiplyBy === 'ByTeachers'
 							? noOfTeachers * 0.95 + this.$CampaignDurationInDays.getValue()
-							: (noOfBoys + noOfGirls) *
+							: reach *
 									0.9 *
 									this.$CampaignDurationInDays.getValue() *
 									attribute.opportunitiesToSee
@@ -715,8 +721,7 @@ export class WisrOptionService {
 	};
 	private calculateEventsCostPerSchoolAndImpression = (
 		events: EventInterface[],
-		noOfBoys: number,
-		noOfGirls: number,
+		reach: number,
 		noOfTeachers: number,
 		noOfClassroom: number
 	) => {
@@ -729,11 +734,8 @@ export class WisrOptionService {
 						attribute.noOfChanges,
 						attribute
 					),
-					impressions: Math.round(
-						(noOfBoys + noOfGirls) *
-							0.9 *
-							attribute.opportunitiesToSee *
-							attribute.quantity
+					impressions: Math.ceil(
+						reach * 0.9 * attribute.opportunitiesToSee * attribute.quantity
 					),
 				})),
 			};
@@ -760,8 +762,7 @@ export class WisrOptionService {
 	private calculateInventoriesAttributeCostOfProduction = (
 		multiplyBy: MultiplyBy,
 		attribute: InventoryAttribute,
-		noOfBoys: number,
-		noOfGirls: number,
+		reach: number,
 		noOfTeachers: number,
 		noOfClassroom: number
 	) => {
@@ -770,10 +771,9 @@ export class WisrOptionService {
 				? (attribute.length > 0 ? attribute.length : attribute.height) *
 				  (attribute.breadth > 0 ? attribute.breadth : attribute.height)
 				: 1;
-		const totalStudents = noOfBoys + noOfGirls;
 		const NOP =
 			multiplyBy === 'ByStudents'
-				? totalStudents
+				? reach
 				: multiplyBy === 'ByTeachers'
 				? noOfTeachers
 				: multiplyBy === 'ByClassrooms'
@@ -842,17 +842,9 @@ export class WisrOptionService {
 			? minBudgetSchoolData.totalBrandOutlay
 			: 0;
 		const MaxBudget = _.sumBy(schoolData, (school) => school.totalBrandOutlay);
-		const minReachSchoolData = _.minBy(
-			schoolData,
-			(school) => school.totalNoOfBoys + school.totalNoOfGirls
-		);
-		const minReach = minReachSchoolData
-			? minReachSchoolData.totalNoOfBoys + minReachSchoolData.totalNoOfGirls
-			: 0;
-		const maxReach = _.sumBy(
-			schoolData,
-			(school) => school.totalNoOfBoys + school.totalNoOfGirls
-		);
+		const minReachSchoolData = _.minBy(schoolData, (school) => school.reach);
+		const minReach = minReachSchoolData ? minReachSchoolData.reach : 0;
+		const maxReach = _.sumBy(schoolData, (school) => school.reach);
 		const minImpressionsSchoolData = _.minBy(
 			schoolData,
 			(school) => school.impressions
@@ -861,12 +853,23 @@ export class WisrOptionService {
 			? minImpressionsSchoolData.impressions
 			: 0;
 		const maxImpressions = _.sumBy(schoolData, (school) => school.impressions);
-		this.$MinBudget.next(Math.round(MinBudget));
-		this.$MaxBudget.next(Math.round(MaxBudget));
+		this.$MinBudget.next(Math.ceil(MinBudget));
+		this.$MaxBudget.next(Math.ceil(MaxBudget));
 		this.$MaxReach.next(maxReach);
 		this.$MinReach.next(minReach);
-		this.$MaxImpressions.next(Math.round(maxImpressions));
-		this.$MinImpressions.next(Math.round(minImpressions));
+		this.$MaxImpressions.next(Math.ceil(maxImpressions));
+		this.$MinImpressions.next(Math.ceil(minImpressions));
+	};
+
+	private getReachWithTargetAudience = (
+		noOfBoys: number,
+		noOfGirls: number
+	) => {
+		return this.$TargetAudience.getValue() == 'co-ed'
+			? noOfBoys + noOfGirls
+			: this.$TargetAudience.getValue() == 'boys'
+			? noOfBoys
+			: noOfGirls;
 	};
 
 	private sortSchoolsByBudget = (
@@ -889,10 +892,7 @@ export class WisrOptionService {
 	) => {
 		return _.orderBy(
 			schoolData,
-			[
-				(school) => school.category,
-				(school) => school.totalNoOfBoys + school.totalNoOfGirls,
-			],
+			[(school) => school.category, (school) => school.reach],
 			['desc', orderBy]
 		);
 	};
@@ -902,7 +902,12 @@ export class WisrOptionService {
 	) => {
 		return _.orderBy(
 			schoolData,
-			[(school) => school.events.length, (school) => school.inventories.length],
+			[
+				(school) => _.uniq(_.map(school.events, (event) => event.name)).length,
+				(school) =>
+					_.uniq(_.map(school.inventories, (inventory) => inventory.parentName))
+						.length,
+			],
 			[orderBy, orderBy]
 		);
 	};
@@ -914,7 +919,7 @@ export class WisrOptionService {
 			schoolData,
 			[
 				(school) => school.category,
-				(school) => school.totalNoOfBoys + school.totalNoOfGirls,
+				(school) => school.reach,
 				(school) => school.totalBrandOutlay,
 			],
 			['desc', orderBy, 'asc']
@@ -1013,119 +1018,16 @@ class OrganizeSchool {
 	};
 
 	private shortSchoolData = (schools: FinalSchool[]) => {
-		let EI: FinalSchool[];
-		let ei: FinalSchool[];
-		let I: FinalSchool[];
-		let i: FinalSchool[];
-		let E: FinalSchool[];
-		let e: FinalSchool[];
-
-		EI = _.filter(schools, (school) => {
-			const eventsList = this.schoolEventsList(school);
-			const inventoriesList = this.schoolInventoriesList(school);
-			const eventsCheck = _.every(this.data.EventsNames, (event) =>
-				_.includes(eventsList, event)
-			);
-			const inventoriesCheck = _.every(
-				this.data.InventoriesNames,
-				(inventory) => _.includes(inventoriesList, inventory)
-			);
-			return eventsCheck && inventoriesCheck;
-		});
-		ei = _.filter(schools, (school) => {
-			const eventsList = this.schoolEventsList(school);
-			const inventoriesList = this.schoolInventoriesList(school);
-			const eventsCheck = _.every(this.data.EventsNames, (event) =>
-				_.includes(eventsList, event)
-			);
-			const inventoriesCheck = _.every(
-				this.data.InventoriesNames,
-				(inventory) => _.includes(inventoriesList, inventory)
-			);
-			return (
-				(eventsList.length > 0 &&
-					!eventsCheck &&
-					inventoriesList.length > 0 &&
-					!inventoriesCheck) ||
-				(eventsList.length > 0 &&
-					eventsCheck &&
-					inventoriesList.length > 0 &&
-					!inventoriesCheck) ||
-				(eventsList.length > 0 &&
-					!eventsCheck &&
-					inventoriesList.length > 0 &&
-					inventoriesCheck)
-			);
-		});
-		I = _.filter(schools, (school) => {
-			const eventsList = this.schoolEventsList(school);
-			const inventoriesList = this.schoolInventoriesList(school);
-			const eventsCheck = _.every(this.data.EventsNames, (event) =>
-				_.includes(eventsList, event)
-			);
-			const inventoriesCheck = _.every(
-				this.data.InventoriesNames,
-				(inventory) => _.includes(inventoriesList, inventory)
-			);
-			return eventsList.length === 0 && inventoriesCheck;
-		});
-		i = _.filter(schools, (school) => {
-			const eventsList = this.schoolEventsList(school);
-			const inventoriesList = this.schoolInventoriesList(school);
-			const eventsCheck = _.every(this.data.EventsNames, (event) =>
-				_.includes(eventsList, event)
-			);
-			const inventoriesCheck = _.every(
-				this.data.InventoriesNames,
-				(inventory) => _.includes(inventoriesList, inventory)
-			);
-			return (
-				eventsList.length === 0 &&
-				inventoriesList.length > 0 &&
-				!inventoriesCheck
-			);
-		});
-		E = _.filter(schools, (school) => {
-			const eventsList = this.schoolEventsList(school);
-			const inventoriesList = this.schoolInventoriesList(school);
-			const eventsCheck = _.every(this.data.EventsNames, (event) =>
-				_.includes(eventsList, event)
-			);
-			const inventoriesCheck = _.every(
-				this.data.InventoriesNames,
-				(inventory) => _.includes(inventoriesList, inventory)
-			);
-			return eventsCheck && inventoriesList.length === 0;
-		});
-		e = _.filter(schools, (school) => {
-			const eventsList = this.schoolEventsList(school);
-			const inventoriesList = this.schoolInventoriesList(school);
-			const eventsCheck = _.every(this.data.EventsNames, (event) =>
-				_.includes(eventsList, event)
-			);
-			const inventoriesCheck = _.every(
-				this.data.InventoriesNames,
-				(inventory) => _.includes(inventoriesList, inventory)
-			);
-			return (
-				!eventsCheck && eventsList.length > 0 && inventoriesList.length === 0
-			);
-		});
-		EI = _.orderBy(
-			EI,
+		return _.orderBy(
+			schools,
 			[
-				(schools) => schools.events.length,
-				(schools) => schools.inventories.length,
+				(school) => _.uniq(_.map(school.events, (event) => event.name)).length,
+				(school) =>
+					_.uniq(_.map(school.inventories, (inventory) => inventory.parentName))
+						.length,
 			],
 			['desc', 'desc']
 		);
-		ei = _.orderBy(
-			ei,
-			[(school) => school.events.length, (school) => school.inventories.length],
-			['desc', 'desc']
-		);
-
-		return _.concat(EI, ei, I, i, E, e);
 	};
 
 	private filterSchoolData = (schools: FinalSchool[], budget: number) => {
@@ -1139,7 +1041,7 @@ class OrganizeSchool {
 		const schoolsByReach = _.takeWhile(
 			_.orderBy(
 				_.differenceBy(schools, schoolsByPriority, (school) => school._id),
-				[(school) => school.totalNoOfBoys + school.totalNoOfGirls],
+				[(school) => school.reach],
 				['desc']
 			),
 			(school) => {
