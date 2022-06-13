@@ -608,7 +608,7 @@ export class WisrOptionService {
 			quantity: Attribute.quantity,
 			noOfChanges: this.SetNoOfChanges(Attribute.noOfChangesYearly),
 			brandOutlay: Attribute.brandOutlay,
-			brandOutlayByDuration: Attribute.brandOutlay,
+			brandOutlayByDuration: Math.ceil(Attribute.brandOutlay),
 		}));
 	};
 	private mapSchoolWithReachDataAndBrandOutlay = (schoolData: any[]) => {
@@ -621,10 +621,10 @@ export class WisrOptionService {
 				totalNoOfBoys,
 				totalNoOfGirls
 			);
-			const totalBrandOutlay = this.calculateTotalBrandOutlayInASchool(
+			const totalBrandOutlay = Math.ceil(this.calculateTotalBrandOutlayInASchool(
 				school.inventories,
 				school.events
-			);
+			));
 			return {
 				...school,
 				totalNoOfBoys,
