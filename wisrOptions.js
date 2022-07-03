@@ -198,11 +198,11 @@ var WisrOptionService = /** @class */ (function () {
             }); });
         };
         this.SetNoOfChanges = function (noOfChangesYearly) {
-            return Math.ceil(_this.$CampaignDurationInDays.getValue() /
+            return Math.round(_this.$CampaignDurationInDays.getValue() /
                 (_this.$NoOfDaysInYear.getValue() / noOfChangesYearly));
         };
         this.SetBrandOutlayByDuration = function (brandOutlay) {
-            return Math.ceil(brandOutlay /
+            return (brandOutlay /
                 (_this.$NoOfDaysInYear.getValue() /
                     _this.$CampaignDurationInDays.getValue()));
         };
@@ -256,7 +256,7 @@ var WisrOptionService = /** @class */ (function () {
                 var totalNoOfBoys = _this.calculateTotalBoysInASchool(school.classrooms);
                 var totalNoOfGirls = _this.calculateTotalGirlsInASchool(school.classrooms);
                 var reach = _this.getReachWithTargetAudience(totalNoOfBoys, totalNoOfGirls);
-                var totalBrandOutlay = _this.calculateTotalBrandOutlayInASchool(school.inventories, school.events);
+                var totalBrandOutlay = Math.round(_this.calculateTotalBrandOutlayInASchool(school.inventories, school.events));
                 return __assign(__assign({}, school), { totalNoOfBoys: totalNoOfBoys, totalNoOfGirls: totalNoOfGirls, reach: reach, totalBrandOutlay: totalBrandOutlay });
             });
         };
@@ -282,17 +282,17 @@ var WisrOptionService = /** @class */ (function () {
             var internalCostPerAttribute = _this.$TotalInternalCostPerSchool.getValue() / totalAttributes;
             return inventories.map(function (inventory) {
                 var multiplyBy = _this.inventoryNOPAffectedBy(inventory.parentName);
-                return __assign(__assign({}, inventory), { attributes: inventory.attributes.map(function (attribute) { return (__assign(__assign({}, attribute), { internalCostPerSchool: internalCostPerAttribute, costPerSchool: _this.calculateInventoriesAttributeCostOfProduction(multiplyBy, attribute, reach, noOfTeachers, noOfClassroom) + internalCostPerAttribute, impressions: Math.ceil(multiplyBy === 'ByTeachers'
+                return __assign(__assign({}, inventory), { attributes: inventory.attributes.map(function (attribute) { return (__assign(__assign({}, attribute), { internalCostPerSchool: internalCostPerAttribute, costPerSchool: _this.calculateInventoriesAttributeCostOfProduction(multiplyBy, attribute, reach, noOfTeachers, noOfClassroom) + internalCostPerAttribute, impressions: multiplyBy === 'ByTeachers'
                             ? noOfTeachers * 0.95 + _this.$CampaignDurationInDays.getValue()
                             : reach *
                                 0.9 *
                                 _this.$CampaignDurationInDays.getValue() *
-                                attribute.opportunitiesToSee) })); }) });
+                                attribute.opportunitiesToSee })); }) });
             });
         };
         this.calculateEventsCostPerSchoolAndImpression = function (events, reach, noOfTeachers, noOfClassroom) {
             return events.map(function (event) {
-                return __assign(__assign({}, event), { attributes: event.attributes.map(function (attribute) { return (__assign(__assign({}, attribute), { costPerSchool: _this.calculateEventsAttributeCostOfProduction(attribute.noOfChanges, attribute), impressions: Math.ceil(reach * 0.9 * attribute.opportunitiesToSee * attribute.quantity) })); }) });
+                return __assign(__assign({}, event), { attributes: event.attributes.map(function (attribute) { return (__assign(__assign({}, attribute), { costPerSchool: _this.calculateEventsAttributeCostOfProduction(attribute.noOfChanges, attribute), impressions: reach * 0.9 * attribute.opportunitiesToSee * attribute.quantity })); }) });
             });
         };
         this.inventoryNOPAffectedBy = function (inventoryParentName) {
@@ -358,12 +358,12 @@ var WisrOptionService = /** @class */ (function () {
                 ? minImpressionsSchoolData.impressions
                 : 0;
             var maxImpressions = lodash_1["default"].sumBy(schoolData, function (school) { return school.impressions; });
-            _this.$MinBudget.next(Math.ceil(MinBudget));
-            _this.$MaxBudget.next(Math.ceil(MaxBudget));
+            _this.$MinBudget.next(Math.round(MinBudget));
+            _this.$MaxBudget.next(Math.round(MaxBudget));
             _this.$MaxReach.next(maxReach);
             _this.$MinReach.next(minReach);
-            _this.$MaxImpressions.next(Math.ceil(maxImpressions));
-            _this.$MinImpressions.next(Math.ceil(minImpressions));
+            _this.$MaxImpressions.next(Math.round(maxImpressions));
+            _this.$MinImpressions.next(Math.round(minImpressions));
         };
         this.getReachWithTargetAudience = function (noOfBoys, noOfGirls) {
             return _this.$TargetAudience.getValue() == 'co-ed'
@@ -434,12 +434,12 @@ var WisrOptionService = /** @class */ (function () {
             }
         });
         this.$FilteredSchool.subscribe(function (schools) {
-            var budget = lodash_1["default"].sumBy(schools, function (school) { return school.totalBrandOutlay; });
+            var budget = Math.round(lodash_1["default"].sumBy(schools, function (school) { return school.totalBrandOutlay; }));
             var reach = lodash_1["default"].sumBy(schools, function (school) { return school.reach; });
-            var impressions = lodash_1["default"].sumBy(schools, function (school) { return school.impressions; });
-            _this.$GetBudget.next(Math.ceil(budget));
+            var impressions = Math.round(lodash_1["default"].sumBy(schools, function (school) { return school.impressions; }));
+            _this.$GetBudget.next(budget);
             _this.$GetReach.next(reach);
-            _this.$GetImpression.next(Math.ceil(impressions));
+            _this.$GetImpression.next(impressions);
             var calculateReach = reach + reach * _this.$PercentageIncreaseInReach.getValue();
             var IncreasedReach = calculateReach > _this.$MaxReach.getValue()
                 ? _this.$MaxReach.getValue()
@@ -455,12 +455,10 @@ var WisrOptionService = /** @class */ (function () {
                 WisrShare -
                 WisrShare * _this.$PercentageDiscountInWISR.getValue();
             var reach = lodash_1["default"].sumBy(schools, function (school) { return school.reach; });
-            var impressions = lodash_1["default"].sumBy(schools, function (school) { return school.impressions; });
-            _this.$IncreasedBudget.next(finalBudget < grossRevenue
-                ? Math.ceil(grossRevenue)
-                : Math.ceil(finalBudget));
+            var impressions = Math.round(lodash_1["default"].sumBy(schools, function (school) { return school.impressions; }));
+            _this.$IncreasedBudget.next(Math.round(finalBudget < grossRevenue ? grossRevenue : finalBudget));
             _this.$IncreasedReach.next(reach);
-            _this.$IncreasedImpressions.next(Math.ceil(impressions));
+            _this.$IncreasedImpressions.next(impressions);
         });
         this.$OptimizedSchool.next(this.mapWithTotalImpressionsAndCostPerSchool(this.$SchoolList.getValue()));
         this.$OptimizedSchool.subscribe(function (schools) {
@@ -468,8 +466,7 @@ var WisrOptionService = /** @class */ (function () {
             _this.categorizationOfSchool(schools);
         });
         this.$SetBudget.subscribe(function (setBudget) {
-            if (setBudget >= _this.$MinBudget.value &&
-                setBudget <= _this.$MaxBudget.value) {
+            if (setBudget >= _this.$MinBudget.value) {
                 var _a = _this.$BudgetRatio.getValue(), CatA = _a.CatA, CatB = _a.CatB, CatC = _a.CatC;
                 var BudgetData = {
                     CatA: setBudget * CatA,
@@ -487,6 +484,10 @@ var WisrOptionService = /** @class */ (function () {
                 var SchoolCatC = OrganizedSchool.CatC;
                 var AllFilteredSchools = lodash_1["default"].uniqBy(lodash_1["default"].concat(SchoolCatA, SchoolCatB, SchoolCatC), function (school) { return school._id; });
                 _this.$FilteredSchool.next(AllFilteredSchools);
+            }
+            else {
+                var LowestBudget = lodash_1["default"].minBy(_this.$OptimizedSchool.getValue(), function (school) { return school.totalBrandOutlay; });
+                _this.$FilteredSchool.next(LowestBudget ? [LowestBudget] : []);
             }
         });
         this.$SetReach.subscribe(function (setReach) {
