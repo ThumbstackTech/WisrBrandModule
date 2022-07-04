@@ -257,7 +257,7 @@ export class WisrOptionService {
             this.categorizationOfSchool(schools);
         });
         this.$SetBudget.subscribe((setBudget) => {
-            if (setBudget >= this.$MinBudget.value) {
+            if (setBudget > 0) {
                 const {CatA, CatB, CatC} = this.$BudgetRatio.getValue();
                 const BudgetData: BudgetData = {
                     CatA: setBudget * CatA,
@@ -278,9 +278,6 @@ export class WisrOptionService {
                     (school) => school._id
                 );
                 this.$FilteredSchool.next(AllFilteredSchools);
-            } else {
-                const LowestBudget = _.minBy(this.$OptimizedSchool.getValue(), (school) => school.totalBrandOutlay)
-                this.$FilteredSchool.next(LowestBudget ? [LowestBudget] : [])
             }
         });
         this.$SetReach.subscribe((setReach) => {
@@ -380,7 +377,7 @@ export class WisrOptionService {
 
     private setWisrOptionSchoolList = (
         IncreasedReach: number,
-        FilteredSchools: FinalSchool[]
+        OptimizedSchools: FinalSchool[]
     ) => {
         if (
             IncreasedReach >= this.$MinReach.value &&
@@ -390,14 +387,11 @@ export class WisrOptionService {
                 this.$FilteredSchool.getValue(),
                 (school) => school.reach
             );
+            const restSchools = _.differenceBy(OptimizedSchools, this.$FilteredSchool.getValue(), (school) => school._id);
             let schoolsAddedByReach: FinalSchool[] = _.takeWhile(
                 this.sortSchoolsByReachForWisrOption(
                     _.filter(
-                        _.differenceBy(
-                            FilteredSchools,
-                            this.$FilteredSchool.getValue(),
-                            (school) => school._id
-                        ),
+                        restSchools,
                         (school) => school.reach <= IncreasedReach - schoolsReach
                     ),
                     'desc'
@@ -407,6 +401,14 @@ export class WisrOptionService {
                     return schoolsReach <= IncreasedReach;
                 }
             );
+
+            if (schoolsAddedByReach.length === 0) {
+                const minBrandOutlaySchool = _.minBy(restSchools, (school) => school.totalBrandOutlay)
+                if (minBrandOutlaySchool) {
+                    schoolsAddedByReach = [minBrandOutlaySchool];
+                }
+            }
+
             this.$SchoolsForWisrOptions.next(
                 _.unionBy(
                     this.$FilteredSchool.getValue(),
@@ -989,6 +991,7 @@ class OrganizeSchool {
         } else {
             this.CatA = this.filterSchoolData(schoolA, CatA);
             finalBudgetA = _.sumBy(this.CatA, (school) => school.totalBrandOutlay);
+            this.ExtraBudget = CatA - finalBudgetA
         }
 
         if (CatB + this.ExtraBudget >= budgetB) {
@@ -1010,6 +1013,41 @@ class OrganizeSchool {
             finalBudgetC = _.sumBy(this.CatC, (school) => school.totalBrandOutlay);
             this.ExtraBudget = CatC + this.ExtraBudget - finalBudgetC;
         }
+        if ((this.CatA.length + this.CatB.length + this.CatC.length) === 0 || this.ExtraBudget > 0) {
+            if ((this.CatA.length + this.CatB.length + this.CatC.length) === 0) {
+                const minBudgetSchool = _.minBy(Schools, (school) => school.totalBrandOutlay)
+                if (minBudgetSchool) {
+                    if (minBudgetSchool.category === 'A') {
+                        this.CatA.push(minBudgetSchool)
+                    } else if (minBudgetSchool.category === 'B') {
+                        this.CatB.push(minBudgetSchool)
+                    } else if (minBudgetSchool.category === 'C') {
+                        this.CatC.push(minBudgetSchool)
+                    }
+                }
+            } else if (this.ExtraBudget > 0) {
+                const clearfixSchoolByBudget = this.clearfixExtraBudgetWIthSchool(Schools, this.ExtraBudget)
+                _.forEach(clearfixSchoolByBudget, (school) => {
+                    if (school.category === 'A') {
+                        this.CatA.push(school)
+                    } else if (school.category === 'B') {
+                        this.CatB.push(school)
+                    } else if (school.category === 'C') {
+                        this.CatC.push(school)
+                    }
+                })
+            }
+        }
+
+    }
+
+    private clearfixExtraBudgetWIthSchool = (schools: FinalSchool[], extraBudget: number) => {
+        const schoolsByLowBudget = _.orderBy(schools, (school) => school.totalBrandOutlay, 'asc')
+        let budget = 0
+        return _.takeWhile(schoolsByLowBudget, (school) => {
+            budget += school.totalBrandOutlay
+            return budget <= extraBudget
+        })
     }
 
     private filterSchoolByCategory = (schools: FinalSchool[]) => {

@@ -85,14 +85,21 @@ var WisrOptionService = /** @class */ (function () {
         this.$InventoryNOP_AffectedByNoOfClassroom = new rxjs_1.BehaviorSubject([
             'Classroom',
         ]);
-        this.setWisrOptionSchoolList = function (IncreasedReach, FilteredSchools) {
+        this.setWisrOptionSchoolList = function (IncreasedReach, OptimizedSchools) {
             if (IncreasedReach >= _this.$MinReach.value &&
                 IncreasedReach <= _this.$MaxReach.value) {
                 var schoolsReach_1 = lodash_1["default"].sumBy(_this.$FilteredSchool.getValue(), function (school) { return school.reach; });
-                var schoolsAddedByReach = lodash_1["default"].takeWhile(_this.sortSchoolsByReachForWisrOption(lodash_1["default"].filter(lodash_1["default"].differenceBy(FilteredSchools, _this.$FilteredSchool.getValue(), function (school) { return school._id; }), function (school) { return school.reach <= IncreasedReach - schoolsReach_1; }), 'desc'), function (school) {
+                var restSchools = lodash_1["default"].differenceBy(OptimizedSchools, _this.$FilteredSchool.getValue(), function (school) { return school._id; });
+                var schoolsAddedByReach = lodash_1["default"].takeWhile(_this.sortSchoolsByReachForWisrOption(lodash_1["default"].filter(restSchools, function (school) { return school.reach <= IncreasedReach - schoolsReach_1; }), 'desc'), function (school) {
                     schoolsReach_1 += school.reach;
                     return schoolsReach_1 <= IncreasedReach;
                 });
+                if (schoolsAddedByReach.length === 0) {
+                    var minBrandOutlaySchool = lodash_1["default"].minBy(restSchools, function (school) { return school.totalBrandOutlay; });
+                    if (minBrandOutlaySchool) {
+                        schoolsAddedByReach = [minBrandOutlaySchool];
+                    }
+                }
                 _this.$SchoolsForWisrOptions.next(lodash_1["default"].unionBy(_this.$FilteredSchool.getValue(), lodash_1["default"].uniqBy(schoolsAddedByReach, function (school) { return school._id; })));
             }
         };
@@ -466,7 +473,7 @@ var WisrOptionService = /** @class */ (function () {
             _this.categorizationOfSchool(schools);
         });
         this.$SetBudget.subscribe(function (setBudget) {
-            if (setBudget >= _this.$MinBudget.value) {
+            if (setBudget > 0) {
                 var _a = _this.$BudgetRatio.getValue(), CatA = _a.CatA, CatB = _a.CatB, CatC = _a.CatC;
                 var BudgetData = {
                     CatA: setBudget * CatA,
@@ -484,10 +491,6 @@ var WisrOptionService = /** @class */ (function () {
                 var SchoolCatC = OrganizedSchool.CatC;
                 var AllFilteredSchools = lodash_1["default"].uniqBy(lodash_1["default"].concat(SchoolCatA, SchoolCatB, SchoolCatC), function (school) { return school._id; });
                 _this.$FilteredSchool.next(AllFilteredSchools);
-            }
-            else {
-                var LowestBudget = lodash_1["default"].minBy(_this.$OptimizedSchool.getValue(), function (school) { return school.totalBrandOutlay; });
-                _this.$FilteredSchool.next(LowestBudget ? [LowestBudget] : []);
             }
         });
         this.$SetReach.subscribe(function (setReach) {
@@ -545,6 +548,14 @@ var OrganizeSchool = /** @class */ (function () {
         this.CatB = [];
         this.CatC = [];
         this.ExtraBudget = 0;
+        this.clearfixExtraBudgetWIthSchool = function (schools, extraBudget) {
+            var schoolsByLowBudget = lodash_1["default"].orderBy(schools, function (school) { return school.totalBrandOutlay; }, 'asc');
+            var budget = 0;
+            return lodash_1["default"].takeWhile(schoolsByLowBudget, function (school) {
+                budget += school.totalBrandOutlay;
+                return budget <= extraBudget;
+            });
+        };
         this.filterSchoolByCategory = function (schools) {
             lodash_1["default"].forEach(schools, function (school) {
                 school.category === 'A'
@@ -610,6 +621,7 @@ var OrganizeSchool = /** @class */ (function () {
         else {
             this.CatA = this.filterSchoolData(schoolA, CatA);
             finalBudgetA = lodash_1["default"].sumBy(this.CatA, function (school) { return school.totalBrandOutlay; });
+            this.ExtraBudget = CatA - finalBudgetA;
         }
         if (CatB + this.ExtraBudget >= budgetB) {
             this.CatB = this.filterSchoolData(schoolB, budgetB);
@@ -630,6 +642,36 @@ var OrganizeSchool = /** @class */ (function () {
             this.CatC = this.filterSchoolData(schoolC, CatC + this.ExtraBudget);
             finalBudgetC = lodash_1["default"].sumBy(this.CatC, function (school) { return school.totalBrandOutlay; });
             this.ExtraBudget = CatC + this.ExtraBudget - finalBudgetC;
+        }
+        if ((this.CatA.length + this.CatB.length + this.CatC.length) === 0 || this.ExtraBudget > 0) {
+            if ((this.CatA.length + this.CatB.length + this.CatC.length) === 0) {
+                var minBudgetSchool = lodash_1["default"].minBy(Schools, function (school) { return school.totalBrandOutlay; });
+                if (minBudgetSchool) {
+                    if (minBudgetSchool.category === 'A') {
+                        this.CatA.push(minBudgetSchool);
+                    }
+                    else if (minBudgetSchool.category === 'B') {
+                        this.CatB.push(minBudgetSchool);
+                    }
+                    else if (minBudgetSchool.category === 'C') {
+                        this.CatC.push(minBudgetSchool);
+                    }
+                }
+            }
+            else if (this.ExtraBudget > 0) {
+                var clearfixSchoolByBudget = this.clearfixExtraBudgetWIthSchool(Schools, this.ExtraBudget);
+                lodash_1["default"].forEach(clearfixSchoolByBudget, function (school) {
+                    if (school.category === 'A') {
+                        _this.CatA.push(school);
+                    }
+                    else if (school.category === 'B') {
+                        _this.CatB.push(school);
+                    }
+                    else if (school.category === 'C') {
+                        _this.CatC.push(school);
+                    }
+                });
+            }
         }
     }
     return OrganizeSchool;
