@@ -402,6 +402,16 @@ export class WisrOptionService {
                 }
             );
 
+            const increasedBudget = _.sumBy(schoolsAddedByReach, (school) => school.totalBrandOutlay);
+            if (increasedBudget > this.$GetBudget.getValue() * 0.3) {
+                schoolsReach = _.sumBy(this.$FilteredSchool.getValue(), (school) => school.reach);
+                schoolsAddedByReach = _.takeWhile(this.sortSchoolsByReachForWisrOption(_.filter(restSchools, (school) => school.reach <= (IncreasedReach - schoolsReach)), "desc", 'mode2'), (school) => {
+                    schoolsReach += school.reach;
+                    return schoolsReach <= IncreasedReach;
+                });
+            }
+
+
             if (schoolsAddedByReach.length === 0) {
                 const minBrandOutlaySchool = _.minBy(restSchools, (school) => school.totalBrandOutlay)
                 if (minBrandOutlaySchool) {
@@ -915,20 +925,11 @@ export class WisrOptionService {
             [orderBy, orderBy]
         );
     };
-    private sortSchoolsByReachForWisrOption = (
-        schoolData: FinalSchool[],
-        orderBy: 'asc' | 'desc'
-    ) => {
-        return _.orderBy(
-            schoolData,
-            [
-                (school) => school.category,
-                (school) => school.reach,
-                (school) => school.totalBrandOutlay,
-            ],
-            ['desc', orderBy, 'asc']
-        );
-    };
+    private sortSchoolsByReachForWisrOption = (schoolData: FinalSchool[], orderBy: "asc" | "desc", mode: 'mode1' | 'mode2' = 'mode1') => {
+        return mode === 'mode1' ?
+            _.orderBy(schoolData, [(school) => school.category, (school) => school.reach, (school) => school.totalBrandOutlay], ["desc", orderBy, 'asc'])
+            : _.orderBy(schoolData, [(school) => school.category, (school) => school.totalBrandOutlay, (school) => school.reach], ["desc", 'asc', orderBy,])
+    }
     private sortSchoolsByImpressions = (
         schoolData: FinalSchool[],
         orderBy: 'asc' | 'desc'
@@ -1026,7 +1027,8 @@ class OrganizeSchool {
                     }
                 }
             } else if (this.ExtraBudget > 0) {
-                const clearfixSchoolByBudget = this.clearfixExtraBudgetWIthSchool(Schools, this.ExtraBudget)
+                const uniqSchool = _.differenceBy(Schools, [...this.CatA, ...this.CatB, ...this.CatC], (school) => school._id)
+                const clearfixSchoolByBudget = this.clearfixExtraBudgetWIthSchool(uniqSchool, this.ExtraBudget)
                 _.forEach(clearfixSchoolByBudget, (school) => {
                     if (school.category === 'A') {
                         this.CatA.push(school)

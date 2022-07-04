@@ -94,6 +94,14 @@ var WisrOptionService = /** @class */ (function () {
                     schoolsReach_1 += school.reach;
                     return schoolsReach_1 <= IncreasedReach;
                 });
+                var increasedBudget = lodash_1["default"].sumBy(schoolsAddedByReach, function (school) { return school.totalBrandOutlay; });
+                if (increasedBudget > _this.$GetBudget.getValue() * 0.3) {
+                    schoolsReach_1 = lodash_1["default"].sumBy(_this.$FilteredSchool.getValue(), function (school) { return school.reach; });
+                    schoolsAddedByReach = lodash_1["default"].takeWhile(_this.sortSchoolsByReachForWisrOption(lodash_1["default"].filter(restSchools, function (school) { return school.reach <= (IncreasedReach - schoolsReach_1); }), "desc", 'mode2'), function (school) {
+                        schoolsReach_1 += school.reach;
+                        return schoolsReach_1 <= IncreasedReach;
+                    });
+                }
                 if (schoolsAddedByReach.length === 0) {
                     var minBrandOutlaySchool = lodash_1["default"].minBy(restSchools, function (school) { return school.totalBrandOutlay; });
                     if (minBrandOutlaySchool) {
@@ -398,12 +406,11 @@ var WisrOptionService = /** @class */ (function () {
                 },
             ], [orderBy, orderBy]);
         };
-        this.sortSchoolsByReachForWisrOption = function (schoolData, orderBy) {
-            return lodash_1["default"].orderBy(schoolData, [
-                function (school) { return school.category; },
-                function (school) { return school.reach; },
-                function (school) { return school.totalBrandOutlay; },
-            ], ['desc', orderBy, 'asc']);
+        this.sortSchoolsByReachForWisrOption = function (schoolData, orderBy, mode) {
+            if (mode === void 0) { mode = 'mode1'; }
+            return mode === 'mode1' ?
+                lodash_1["default"].orderBy(schoolData, [function (school) { return school.category; }, function (school) { return school.reach; }, function (school) { return school.totalBrandOutlay; }], ["desc", orderBy, 'asc'])
+                : lodash_1["default"].orderBy(schoolData, [function (school) { return school.category; }, function (school) { return school.totalBrandOutlay; }, function (school) { return school.reach; }], ["desc", 'asc', orderBy,]);
         };
         this.sortSchoolsByImpressions = function (schoolData, orderBy) {
             return lodash_1["default"].orderBy(schoolData, [function (school) { return school.category; }, function (school) { return school.impressions; }], ['desc', orderBy]);
@@ -447,10 +454,10 @@ var WisrOptionService = /** @class */ (function () {
             _this.$GetBudget.next(budget);
             _this.$GetReach.next(reach);
             _this.$GetImpression.next(impressions);
-            var calculateReach = reach + reach * _this.$PercentageIncreaseInReach.getValue();
-            var IncreasedReach = calculateReach > _this.$MaxReach.getValue()
+            var calculateReach = (reach + reach * _this.$PercentageIncreaseInReach.getValue()) || _this.$MinReach.getValue();
+            var IncreasedReach = Math.round(calculateReach > _this.$MaxReach.getValue()
                 ? _this.$MaxReach.getValue()
-                : calculateReach;
+                : calculateReach);
             _this.setWisrOptionSchoolList(IncreasedReach, _this.$OptimizedSchool.getValue());
         });
         this.$SchoolsForWisrOptions.subscribe(function (schools) {
@@ -659,7 +666,8 @@ var OrganizeSchool = /** @class */ (function () {
                 }
             }
             else if (this.ExtraBudget > 0) {
-                var clearfixSchoolByBudget = this.clearfixExtraBudgetWIthSchool(Schools, this.ExtraBudget);
+                var uniqSchool = lodash_1["default"].differenceBy(Schools, __spreadArray(__spreadArray(__spreadArray([], this.CatA, true), this.CatB, true), this.CatC, true), function (school) { return school._id; });
+                var clearfixSchoolByBudget = this.clearfixExtraBudgetWIthSchool(uniqSchool, this.ExtraBudget);
                 lodash_1["default"].forEach(clearfixSchoolByBudget, function (school) {
                     if (school.category === 'A') {
                         _this.CatA.push(school);
