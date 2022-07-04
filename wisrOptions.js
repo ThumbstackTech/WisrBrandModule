@@ -341,7 +341,7 @@ var WisrOptionService = /** @class */ (function () {
             return SOP * attribute.quantity * attribute.materialCost;
         };
         this.calculateTotalImpressionsInASchool = function (inventories, events) {
-            return (lodash_1["default"].sumBy(inventories, function (inventory) {
+            return Math.round(lodash_1["default"].sumBy(inventories, function (inventory) {
                 return lodash_1["default"].sumBy(inventory.attributes, function (attribute) { return attribute.impressions; });
             }) +
                 lodash_1["default"].sumBy(events, function (event) {
@@ -555,7 +555,7 @@ var OrganizeSchool = /** @class */ (function () {
         this.CatB = [];
         this.CatC = [];
         this.ExtraBudget = 0;
-        this.clearfixExtraBudgetWIthSchool = function (schools, extraBudget) {
+        this.clearfixExtraBudgetWithSchool = function (schools, extraBudget) {
             var schoolsByLowBudget = lodash_1["default"].orderBy(schools, function (school) { return school.totalBrandOutlay; }, 'asc');
             var budget = 0;
             return lodash_1["default"].takeWhile(schoolsByLowBudget, function (school) {
@@ -667,7 +667,7 @@ var OrganizeSchool = /** @class */ (function () {
             }
             else if (this.ExtraBudget > 0) {
                 var uniqSchool = lodash_1["default"].differenceBy(Schools, __spreadArray(__spreadArray(__spreadArray([], this.CatA, true), this.CatB, true), this.CatC, true), function (school) { return school._id; });
-                var clearfixSchoolByBudget = this.clearfixExtraBudgetWIthSchool(uniqSchool, this.ExtraBudget);
+                var clearfixSchoolByBudget = this.clearfixExtraBudgetWithSchool(uniqSchool, this.ExtraBudget);
                 lodash_1["default"].forEach(clearfixSchoolByBudget, function (school) {
                     if (school.category === 'A') {
                         _this.CatA.push(school);

@@ -810,7 +810,7 @@ export class WisrOptionService {
         inventories: InventoryInterface[],
         events: EventInterface[]
     ) => {
-        return (
+        return Math.round(
             _.sumBy(inventories, (inventory) =>
                 _.sumBy(inventory.attributes, (attribute) => attribute.impressions)
             ) +
@@ -1028,7 +1028,7 @@ class OrganizeSchool {
                 }
             } else if (this.ExtraBudget > 0) {
                 const uniqSchool = _.differenceBy(Schools, [...this.CatA, ...this.CatB, ...this.CatC], (school) => school._id)
-                const clearfixSchoolByBudget = this.clearfixExtraBudgetWIthSchool(uniqSchool, this.ExtraBudget)
+                const clearfixSchoolByBudget = this.clearfixExtraBudgetWithSchool(uniqSchool, this.ExtraBudget)
                 _.forEach(clearfixSchoolByBudget, (school) => {
                     if (school.category === 'A') {
                         this.CatA.push(school)
@@ -1043,7 +1043,7 @@ class OrganizeSchool {
 
     }
 
-    private clearfixExtraBudgetWIthSchool = (schools: FinalSchool[], extraBudget: number) => {
+    private clearfixExtraBudgetWithSchool = (schools: FinalSchool[], extraBudget: number) => {
         const schoolsByLowBudget = _.orderBy(schools, (school) => school.totalBrandOutlay, 'asc')
         let budget = 0
         return _.takeWhile(schoolsByLowBudget, (school) => {
