@@ -219,11 +219,11 @@ export class WisrOptionService {
             this.$GetReach.next(reach);
             this.$GetImpression.next(impressions);
             const calculateReach =
-                reach + reach * this.$PercentageIncreaseInReach.getValue();
+                (reach + reach * this.$PercentageIncreaseInReach.getValue()) || this.$MinReach.getValue();
             const IncreasedReach =
-                calculateReach > this.$MaxReach.getValue()
+                Math.round(calculateReach > this.$MaxReach.getValue()
                     ? this.$MaxReach.getValue()
-                    : calculateReach;
+                    : calculateReach);
             this.setWisrOptionSchoolList(
                 IncreasedReach,
                 this.$OptimizedSchool.getValue()
