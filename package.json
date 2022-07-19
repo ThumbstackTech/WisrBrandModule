@@ -1,12 +1,12 @@
 {
   "name": "wisr_algo",
-  "version": "2.0.2",
+  "version": "2.2.0",
   "description": "Wisr Algorithm",
   "scripts": {
     "build": "tsc wisrOptions.ts --resolveJsonModule --esModuleInterop",
     "run": "node wisrOptions.js"
   },
-  "author": "",
+  "author": "SURAJ",
   "license": "ISC",
   "dependencies": {
     "lodash": "^4.17.21",
