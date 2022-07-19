@@ -177,6 +177,7 @@ var WisrOptionService = /** @class */ (function () {
                 type: Inventory.type,
                 name: Inventory.name,
                 school: Inventory.school,
+                _custom: Inventory._custom,
                 parentName: Inventory.parentName,
                 attributes: _this.VerifyAndMapInventoryAttributeData(Inventory.attributes)
             }); }), function (Inventory) { return Inventory.attributes.length > 0; });
@@ -194,7 +195,9 @@ var WisrOptionService = /** @class */ (function () {
                     AttributeObj.materialCost &&
                     AttributeObj.noOfChangesYearly &&
                     AttributeObj.quantity &&
-                    AttributeObj.brandOutlay;
+                    AttributeObj.brandOutlay &&
+                    AttributeObj.netRevenue &&
+                    AttributeObj.costPerSchool;
             }).map(function (Attribute) { return ({
                 _id: Attribute._id,
                 name: Attribute.name,
@@ -209,12 +212,27 @@ var WisrOptionService = /** @class */ (function () {
                 noOfChanges: _this.SetNoOfChanges(Attribute.noOfChangesYearly),
                 quantity: Attribute.quantity,
                 brandOutlay: Attribute.brandOutlay,
-                brandOutlayByDuration: _this.SetBrandOutlayByDuration(Attribute.brandOutlay)
+                netRevenue: Attribute.netRevenue,
+                netRevenueByDuration: _this.SetNetRevenueByDuration(Attribute.netRevenue),
+                costPerSchool: Attribute.costPerSchool,
+                costPerSchoolByDuration: _this.CostPerSchoolByDuration(Attribute.costPerSchool, Attribute.noOfChangesYearly, _this.SetNoOfChanges(Attribute.noOfChangesYearly)),
+                brandOutlayByDuration: _this.BrandOutlayByDuration(_this.SetNetRevenueByDuration(Attribute.netRevenue), _this.CostPerSchoolByDuration(Attribute.costPerSchool, Attribute.noOfChangesYearly, _this.SetNoOfChanges(Attribute.noOfChangesYearly)))
             }); });
         };
+        this.CostPerSchoolByDuration = function (costPerSchool, noOfChangesYearly, noOfChanges) {
+            return ((costPerSchool / noOfChangesYearly) * noOfChanges);
+        };
+        this.BrandOutlayByDuration = function (netRevenueByDuration, costPerSchoolByDuration) {
+            return Math.round(netRevenueByDuration + costPerSchoolByDuration);
+        };
         this.SetNoOfChanges = function (noOfChangesYearly) {
-            return Math.round(_this.$CampaignDurationInDays.getValue() /
+            return Math.ceil(_this.$CampaignDurationInDays.getValue() /
                 (_this.$NoOfDaysInYear.getValue() / noOfChangesYearly));
+        };
+        this.SetNetRevenueByDuration = function (netRevenue) {
+            return (netRevenue /
+                (_this.$NoOfDaysInYear.getValue() /
+                    _this.$CampaignDurationInDays.getValue()));
         };
         this.SetBrandOutlayByDuration = function (brandOutlay) {
             return (brandOutlay /
@@ -249,10 +267,12 @@ var WisrOptionService = /** @class */ (function () {
                     AttributeObj.opportunitiesToSee &&
                     AttributeObj.materialCost &&
                     AttributeObj.quantity &&
-                    AttributeObj.brandOutlay;
+                    AttributeObj.brandOutlay &&
+                    AttributeObj.netRevenue;
             }).map(function (Attribute) { return ({
                 _id: Attribute._id,
                 name: Attribute.name,
+                isCustom: Attribute.isCustom,
                 units: Attribute.units,
                 length: Attribute.length <= 0 ? 1 : Attribute.length,
                 breadth: Attribute.breadth <= 0 ? 1 : Attribute.breadth,
@@ -260,10 +280,11 @@ var WisrOptionService = /** @class */ (function () {
                 opportunitiesToSee: Attribute.opportunitiesToSee,
                 materialCost: Attribute.materialCost,
                 noOfChangesYearly: Attribute.noOfChangesYearly,
-                quantity: Attribute.quantity,
                 noOfChanges: _this.SetNoOfChanges(Attribute.noOfChangesYearly),
+                quantity: Attribute.quantity,
+                netRevenue: Attribute.netRevenue,
                 brandOutlay: Attribute.brandOutlay,
-                brandOutlayByDuration: Attribute.brandOutlay
+                brandOutlayByDuration: Math.round(Attribute.netRevenue)
             }); });
         };
         this.mapSchoolWithReachDataAndBrandOutlay = function (schoolData) {
@@ -297,7 +318,7 @@ var WisrOptionService = /** @class */ (function () {
             var internalCostPerAttribute = _this.$TotalInternalCostPerSchool.getValue() / totalAttributes;
             return inventories.map(function (inventory) {
                 var multiplyBy = _this.inventoryNOPAffectedBy(inventory.parentName);
-                return __assign(__assign({}, inventory), { attributes: inventory.attributes.map(function (attribute) { return (__assign(__assign({}, attribute), { internalCostPerSchool: internalCostPerAttribute, costPerSchool: _this.calculateInventoriesAttributeCostOfProduction(multiplyBy, attribute, reach, noOfTeachers, noOfClassroom) + internalCostPerAttribute, impressions: multiplyBy === 'ByTeachers'
+                return __assign(__assign({}, inventory), { attributes: inventory.attributes.map(function (attribute) { return (__assign(__assign({}, attribute), { internalCostPerSchool: internalCostPerAttribute, impressions: multiplyBy === 'ByTeachers'
                             ? noOfTeachers * 0.95 + _this.$CampaignDurationInDays.getValue()
                             : reach *
                                 0.9 *
@@ -307,7 +328,7 @@ var WisrOptionService = /** @class */ (function () {
         };
         this.calculateEventsCostPerSchoolAndImpression = function (events, reach, noOfTeachers, noOfClassroom) {
             return events.map(function (event) {
-                return __assign(__assign({}, event), { attributes: event.attributes.map(function (attribute) { return (__assign(__assign({}, attribute), { costPerSchool: _this.calculateEventsAttributeCostOfProduction(attribute.noOfChanges, attribute), impressions: reach * 0.9 * attribute.opportunitiesToSee * attribute.quantity })); }) });
+                return __assign(__assign({}, event), { attributes: event.attributes.map(function (attribute) { return (__assign(__assign({}, attribute), { impressions: reach * 0.9 * attribute.opportunitiesToSee * attribute.quantity })); }) });
             });
         };
         this.inventoryNOPAffectedBy = function (inventoryParentName) {
@@ -318,27 +339,6 @@ var WisrOptionService = /** @class */ (function () {
                     : lodash_1["default"].includes(_this.$InventoryNOP_AffectedByNoOfClassroom.getValue(), inventoryParentName)
                         ? 'ByClassrooms'
                         : 'ByNoOne';
-        };
-        this.calculateInventoriesAttributeCostOfProduction = function (multiplyBy, attribute, reach, noOfTeachers, noOfClassroom) {
-            var SOP = attribute.units === 'feet'
-                ? (attribute.length > 0 ? attribute.length : attribute.height) *
-                    (attribute.breadth > 0 ? attribute.breadth : attribute.height)
-                : 1;
-            var NOP = multiplyBy === 'ByStudents'
-                ? reach
-                : multiplyBy === 'ByTeachers'
-                    ? noOfTeachers
-                    : multiplyBy === 'ByClassrooms'
-                        ? attribute.quantity * noOfClassroom
-                        : attribute.quantity;
-            return SOP * NOP * attribute.noOfChanges * attribute.materialCost;
-        };
-        this.calculateEventsAttributeCostOfProduction = function (noOfPlacement, attribute) {
-            var SOP = attribute.units === 'feet'
-                ? (attribute.length > 0 ? attribute.length : attribute.height) *
-                    (attribute.breadth > 0 ? attribute.breadth : attribute.height)
-                : 1;
-            return SOP * attribute.quantity * attribute.materialCost;
         };
         this.calculateTotalImpressionsInASchool = function (inventories, events) {
             return Math.round(lodash_1["default"].sumBy(inventories, function (inventory) {

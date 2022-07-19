@@ -42,6 +42,7 @@ export interface EventAttribute {
     impressions: number;
     brandOutlay: number;
     costPerSchool: number;
+    netRevenue: number;
     brandOutlayByDuration: number;
 }
 
@@ -73,11 +74,14 @@ export interface InventoryAttribute {
     noOfChangesYearly: number;
     noOfChanges: number;
     quantity: number;
-    costPerSchool: number;
     internalCostPerSchool: number;
     impressions: number;
     brandOutlay: number;
     brandOutlayByDuration: number;
+    netRevenue: number;
+    netRevenueByDuration: number;
+    costPerSchool: number;
+    costPerSchoolByDuration: number;
 }
 
 export interface Ratio {
@@ -516,6 +520,7 @@ export class WisrOptionService {
                 type: Inventory.type,
                 name: Inventory.name,
                 school: Inventory.school,
+                _custom: Inventory._custom,
                 parentName: Inventory.parentName,
                 attributes: this.VerifyAndMapInventoryAttributeData(
                     Inventory.attributes
@@ -541,7 +546,9 @@ export class WisrOptionService {
                 AttributeObj.materialCost &&
                 AttributeObj.noOfChangesYearly &&
                 AttributeObj.quantity &&
-                AttributeObj.brandOutlay
+                AttributeObj.brandOutlay &&
+                AttributeObj.netRevenue &&
+                AttributeObj.costPerSchool
         ).map((Attribute) => ({
             _id: Attribute._id,
             name: Attribute.name,
@@ -556,17 +563,36 @@ export class WisrOptionService {
             noOfChanges: this.SetNoOfChanges(Attribute.noOfChangesYearly),
             quantity: Attribute.quantity,
             brandOutlay: Attribute.brandOutlay,
-            brandOutlayByDuration: this.SetBrandOutlayByDuration(
-                Attribute.brandOutlay
-            ),
+            netRevenue: Attribute.netRevenue,
+            netRevenueByDuration: this.SetNetRevenueByDuration(Attribute.netRevenue),
+            costPerSchool: Attribute.costPerSchool,
+            costPerSchoolByDuration: this.CostPerSchoolByDuration(Attribute.costPerSchool,Attribute.noOfChangesYearly,this.SetNoOfChanges(Attribute.noOfChangesYearly)),
+            brandOutlayByDuration: this.BrandOutlayByDuration(this.SetNetRevenueByDuration(Attribute.netRevenue),this.CostPerSchoolByDuration(Attribute.costPerSchool,Attribute.noOfChangesYearly,this.SetNoOfChanges(Attribute.noOfChangesYearly)))
         }));
     };
+
+    private CostPerSchoolByDuration = (costPerSchool: number, noOfChangesYearly: number, noOfChanges: number) => {
+        return ((costPerSchool / noOfChangesYearly) * noOfChanges);
+    }
+
+    private BrandOutlayByDuration = (netRevenueByDuration: number, costPerSchoolByDuration: number) => {
+        return Math.round(netRevenueByDuration + costPerSchoolByDuration);
+    }
+
     private SetNoOfChanges = (noOfChangesYearly: number) => {
-        return Math.round(
+        return Math.ceil(
             this.$CampaignDurationInDays.getValue() /
             (this.$NoOfDaysInYear.getValue() / noOfChangesYearly)
         );
     };
+    private SetNetRevenueByDuration = (netRevenue: number) => {
+        return (
+            netRevenue /
+            (this.$NoOfDaysInYear.getValue() /
+                this.$CampaignDurationInDays.getValue())
+        )
+    }
+
     private SetBrandOutlayByDuration = (brandOutlay: number) => {
         return (
             brandOutlay /
@@ -574,6 +600,7 @@ export class WisrOptionService {
                 this.$CampaignDurationInDays.getValue())
         );
     };
+
     private FilterEventBySchoolId = (schoolId: string) => {
         return this.VerifyAndMapEventData(
             _.filter(this.$EventList.getValue(), (Event) => Event.school === schoolId)
@@ -611,10 +638,12 @@ export class WisrOptionService {
                 AttributeObj.opportunitiesToSee &&
                 AttributeObj.materialCost &&
                 AttributeObj.quantity &&
-                AttributeObj.brandOutlay
+                AttributeObj.brandOutlay  &&
+                AttributeObj.netRevenue
         ).map((Attribute) => ({
             _id: Attribute._id,
             name: Attribute.name,
+            isCustom: Attribute.isCustom,
             units: Attribute.units,
             length: Attribute.length <= 0 ? 1 : Attribute.length,
             breadth: Attribute.breadth <= 0 ? 1 : Attribute.breadth,
@@ -622,10 +651,11 @@ export class WisrOptionService {
             opportunitiesToSee: Attribute.opportunitiesToSee,
             materialCost: Attribute.materialCost,
             noOfChangesYearly: Attribute.noOfChangesYearly,
-            quantity: Attribute.quantity,
             noOfChanges: this.SetNoOfChanges(Attribute.noOfChangesYearly),
+            quantity: Attribute.quantity,
+            netRevenue: Attribute.netRevenue,
             brandOutlay: Attribute.brandOutlay,
-            brandOutlayByDuration: Attribute.brandOutlay,
+            brandOutlayByDuration: Math.round(Attribute.netRevenue),
         }));
     };
     private mapSchoolWithReachDataAndBrandOutlay = (schoolData: any[]) => {
@@ -716,14 +746,6 @@ export class WisrOptionService {
                 attributes: inventory.attributes.map((attribute) => ({
                     ...attribute,
                     internalCostPerSchool: internalCostPerAttribute,
-                    costPerSchool:
-                        this.calculateInventoriesAttributeCostOfProduction(
-                            multiplyBy,
-                            attribute,
-                            reach,
-                            noOfTeachers,
-                            noOfClassroom
-                        ) + internalCostPerAttribute,
                     impressions: multiplyBy === 'ByTeachers'
                         ? noOfTeachers * 0.95 + this.$CampaignDurationInDays.getValue()
                         : reach *
@@ -746,10 +768,6 @@ export class WisrOptionService {
                 ...event,
                 attributes: event.attributes.map((attribute) => ({
                     ...attribute,
-                    costPerSchool: this.calculateEventsAttributeCostOfProduction(
-                        attribute.noOfChanges,
-                        attribute
-                    ),
                     impressions: reach * 0.9 * attribute.opportunitiesToSee * attribute.quantity,
                 })),
             };
@@ -772,39 +790,6 @@ export class WisrOptionService {
                 )
                     ? 'ByClassrooms'
                     : 'ByNoOne';
-    };
-    private calculateInventoriesAttributeCostOfProduction = (
-        multiplyBy: MultiplyBy,
-        attribute: InventoryAttribute,
-        reach: number,
-        noOfTeachers: number,
-        noOfClassroom: number
-    ) => {
-        const SOP =
-            attribute.units === 'feet'
-                ? (attribute.length > 0 ? attribute.length : attribute.height) *
-                (attribute.breadth > 0 ? attribute.breadth : attribute.height)
-                : 1;
-        const NOP =
-            multiplyBy === 'ByStudents'
-                ? reach
-                : multiplyBy === 'ByTeachers'
-                    ? noOfTeachers
-                    : multiplyBy === 'ByClassrooms'
-                        ? attribute.quantity * noOfClassroom
-                        : attribute.quantity;
-        return SOP * NOP * attribute.noOfChanges * attribute.materialCost;
-    };
-    private calculateEventsAttributeCostOfProduction = (
-        noOfPlacement: number,
-        attribute: EventAttribute
-    ) => {
-        const SOP =
-            attribute.units === 'feet'
-                ? (attribute.length > 0 ? attribute.length : attribute.height) *
-                (attribute.breadth > 0 ? attribute.breadth : attribute.height)
-                : 1;
-        return SOP * attribute.quantity * attribute.materialCost;
     };
     private calculateTotalImpressionsInASchool = (
         inventories: InventoryInterface[],
