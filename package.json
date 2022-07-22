@@ -3,7 +3,7 @@
   "version": "2.2.0",
   "description": "Wisr Algorithm",
   "scripts": {
-    "build": "tsc wisrOptions.ts --resolveJsonModule --esModuleInterop",
+    "build": "tsc wisrOptions.ts --resolveJsonModule --esModuleInterop --module esnext --target esnext --moduleResolution node --lib esnext",
     "run": "node wisrOptions.js"
   },
   "author": "SURAJ",

@@ -254,7 +254,7 @@ export class WisrOptionService {
             this.$IncreasedImpressions.next(impressions);
         });
         this.$OptimizedSchool.next(
-            this.mapWithTotalImpressionsAndCostPerSchool(this.$SchoolList.getValue())
+            this.mapWithTotalImpressions(this.$SchoolList.getValue())
         );
         this.$OptimizedSchool.subscribe((schools) => {
             this.calculateMinMaxReachImpressionsBudget(schools);
@@ -451,28 +451,34 @@ export class WisrOptionService {
                 schoolObj.schoolName &&
                 schoolObj.category &&
                 schoolObj.noOfTeachers
-        ).map((school) => ({
-            _id: school._id,
-            schoolName: school.schoolName,
-            category: school.category,
-            noOfTeachers: school.noOfTeachers,
-            pinCode: school.pincode,
-            city: school.city,
-            address: school.address,
-            state: school.state,
-            floors: school.floors,
-            classrooms: this.FilterClassroomBySchoolId(school._id),
-            inventories: this.FilterInventoryBySchoolId(school._id),
-            events: this.FilterEventBySchoolId(school._id),
-        }));
-    };
-    private FilterClassroomBySchoolId = (schoolId: string) => {
-        return this.VerifyAndMapClassroomData(
-            _.filter(
-                this.$ClassroomList.getValue(),
-                (classroom) => classroom.school === schoolId
-            )
-        ) as ClassroomInterface[];
+        ).map((school) => {
+            const classrooms = this.VerifyAndMapClassroomData(_.filter(this.$ClassroomList.getValue(), (classroom) => classroom.school === school._id)) as ClassroomInterface[]
+            const totalNoOfBoys = _.sumBy(classrooms, (classroom) => classroom.boys)
+            const totalNoOfGirls = _.sumBy(classrooms, (classroom) => classroom.girls)
+            const reach = totalNoOfBoys + totalNoOfGirls
+            const noOfTeachers = school.noOfTeachers
+            const filteredInventories = _.filter(this.$InventoryList.getValue(), (inventory) => inventory.school === school._id)
+            const filteredEvents = _.filter(this.$EventList.getValue(), (Event) => Event.school === school._id)
+            const inventories = this.VerifyAndMapInventoryData(filteredInventories, noOfTeachers, reach, classrooms.length) as unknown as InventoryInterface[]
+            const events = this.VerifyAndMapEventData(filteredEvents) as unknown as EventInterface[]
+            return {
+                _id: school._id,
+                schoolName: school.schoolName,
+                category: school.category,
+                noOfTeachers: school.noOfTeachers,
+                pinCode: school.pincode,
+                city: school.city,
+                address: school.address,
+                state: school.state,
+                floors: school.floors,
+                classrooms,
+                totalNoOfBoys,
+                totalNoOfGirls,
+                reach,
+                inventories,
+                events,
+            }
+        });
     };
     private VerifyAndMapClassroomData = (classroomData: any[]) => {
         return _.filter(
@@ -495,15 +501,7 @@ export class WisrOptionService {
                 (classroom.girls ? classroom.girls : 0),
         }));
     };
-    private FilterInventoryBySchoolId = (schoolId: string) => {
-        return this.VerifyAndMapInventoryData(
-            _.filter(
-                this.$InventoryList.getValue(),
-                (inventory) => inventory.school === schoolId
-            )
-        ) as unknown as InventoryInterface[];
-    };
-    private VerifyAndMapInventoryData = (InventoryData: any[]) => {
+    private VerifyAndMapInventoryData = (InventoryData: any[], noOfTeachers: number, noOfStudents: number, noOfClassrooms: number) => {
         return _.filter(
             _.filter(
                 InventoryData,
@@ -523,14 +521,14 @@ export class WisrOptionService {
                 _custom: Inventory._custom,
                 parentName: Inventory.parentName,
                 attributes: this.VerifyAndMapInventoryAttributeData(
-                    Inventory.attributes
+                    Inventory.attributes, Inventory.parentName, noOfTeachers, noOfStudents, noOfClassrooms
                 ),
             })),
             (Inventory) => Inventory.attributes.length > 0
         );
     };
     private VerifyAndMapInventoryAttributeData = (
-        InventoryAttributeData: any[]
+        InventoryAttributeData: any[], InventoryName: string, noOfTeachers: number, noOfStudents: number, noOfClassrooms: number
     ) => {
         return _.filter(
             InventoryAttributeData,
@@ -549,36 +547,39 @@ export class WisrOptionService {
                 AttributeObj.brandOutlay &&
                 AttributeObj.netRevenue &&
                 AttributeObj.costPerSchool
-        ).map((Attribute) => ({
-            _id: Attribute._id,
-            name: Attribute.name,
-            units: Attribute.units,
-            length: Attribute.length <= 0 ? 1 : Attribute.length,
-            breadth: Attribute.breadth <= 0 ? 1 : Attribute.breadth,
-            height: Attribute.height <= 0 ? 1 : Attribute.height,
-            inventory: Attribute.inventory,
-            opportunitiesToSee: Attribute.opportunitiesToSee,
-            materialCost: Attribute.materialCost,
-            noOfChangesYearly: Attribute.noOfChangesYearly,
-            noOfChanges: this.SetNoOfChanges(Attribute.noOfChangesYearly),
-            quantity: Attribute.quantity,
-            brandOutlay: Attribute.brandOutlay,
-            netRevenue: Attribute.netRevenue,
-            netRevenueByDuration: this.SetNetRevenueByDuration(Attribute.netRevenue),
-            costPerSchool: Attribute.costPerSchool,
-            costPerSchoolByDuration: this.CostPerSchoolByDuration(Attribute.costPerSchool,Attribute.noOfChangesYearly,this.SetNoOfChanges(Attribute.noOfChangesYearly)),
-            brandOutlayByDuration: this.BrandOutlayByDuration(this.SetNetRevenueByDuration(Attribute.netRevenue),this.CostPerSchoolByDuration(Attribute.costPerSchool,Attribute.noOfChangesYearly,this.SetNoOfChanges(Attribute.noOfChangesYearly)))
-        }));
+        ).map((Attribute) => {
+
+            const inventoryName = InventoryName.toLowerCase().trim();
+            const multiplyBy: MultiplyBy = this.inventoryNOPAffectedBy(inventoryName);
+            const materialCost = Attribute.materialCost;
+            const noOfChanges = this.SetNoOfChanges(Attribute.noOfChangesYearly)
+            const netRevenueByDuration = this.SetNetRevenueByDuration(Attribute.netRevenue)
+            const costPerSchoolByDuration = multiplyBy !== 'ByNoOne' ? (materialCost * noOfChanges + (multiplyBy === 'ByStudents' ? noOfStudents : multiplyBy === "ByTeachers" ? noOfTeachers : noOfClassrooms) + 417.07)
+                : (Attribute.costPerSchool / Attribute.noOfChangesYearly) * noOfChanges;
+            const brandOutlayByDuration = Math.round(netRevenueByDuration + costPerSchoolByDuration);
+
+            return {
+                _id: Attribute._id,
+                name: Attribute.name,
+                units: Attribute.units,
+                length: Attribute.length <= 0 ? 1 : Attribute.length,
+                breadth: Attribute.breadth <= 0 ? 1 : Attribute.breadth,
+                height: Attribute.height <= 0 ? 1 : Attribute.height,
+                inventory: Attribute.inventory,
+                opportunitiesToSee: Attribute.opportunitiesToSee,
+                materialCost,
+                noOfChangesYearly: Attribute.noOfChangesYearly,
+                noOfChanges,
+                quantity: Attribute.quantity,
+                brandOutlay: Attribute.brandOutlay,
+                netRevenue: Attribute.netRevenue,
+                netRevenueByDuration,
+                costPerSchool: Attribute.costPerSchool,
+                costPerSchoolByDuration,
+                brandOutlayByDuration
+            }
+        });
     };
-
-    private CostPerSchoolByDuration = (costPerSchool: number, noOfChangesYearly: number, noOfChanges: number) => {
-        return ((costPerSchool / noOfChangesYearly) * noOfChanges);
-    }
-
-    private BrandOutlayByDuration = (netRevenueByDuration: number, costPerSchoolByDuration: number) => {
-        return Math.round(netRevenueByDuration + costPerSchoolByDuration);
-    }
-
     private SetNoOfChanges = (noOfChangesYearly: number) => {
         return Math.ceil(
             this.$CampaignDurationInDays.getValue() /
@@ -592,20 +593,6 @@ export class WisrOptionService {
                 this.$CampaignDurationInDays.getValue())
         )
     }
-
-    private SetBrandOutlayByDuration = (brandOutlay: number) => {
-        return (
-            brandOutlay /
-            (this.$NoOfDaysInYear.getValue() /
-                this.$CampaignDurationInDays.getValue())
-        );
-    };
-
-    private FilterEventBySchoolId = (schoolId: string) => {
-        return this.VerifyAndMapEventData(
-            _.filter(this.$EventList.getValue(), (Event) => Event.school === schoolId)
-        ) as unknown as EventInterface[];
-    };
     private VerifyAndMapEventData = (EventData: any[]) => {
         return _.filter(
             _.filter(
@@ -638,7 +625,7 @@ export class WisrOptionService {
                 AttributeObj.opportunitiesToSee &&
                 AttributeObj.materialCost &&
                 AttributeObj.quantity &&
-                AttributeObj.brandOutlay  &&
+                AttributeObj.brandOutlay &&
                 AttributeObj.netRevenue
         ).map((Attribute) => ({
             _id: Attribute._id,
@@ -660,32 +647,15 @@ export class WisrOptionService {
     };
     private mapSchoolWithReachDataAndBrandOutlay = (schoolData: any[]) => {
         return this.OptimizeSchoolData(schoolData).map((school) => {
-            const totalNoOfBoys = this.calculateTotalBoysInASchool(school.classrooms);
-            const totalNoOfGirls = this.calculateTotalGirlsInASchool(
-                school.classrooms
-            );
-            const reach = this.getReachWithTargetAudience(
-                totalNoOfBoys,
-                totalNoOfGirls
-            );
             const totalBrandOutlay = Math.round(this.calculateTotalBrandOutlayInASchool(
                 school.inventories,
                 school.events
             ));
             return {
                 ...school,
-                totalNoOfBoys,
-                totalNoOfGirls,
-                reach,
                 totalBrandOutlay,
             };
         }) as unknown as FinalSchool[];
-    };
-    private calculateTotalBoysInASchool = (classrooms: ClassroomInterface[]) => {
-        return _.sumBy(classrooms, (classroom) => classroom.boys);
-    };
-    private calculateTotalGirlsInASchool = (classrooms: ClassroomInterface[]) => {
-        return _.sumBy(classrooms, (classroom) => classroom.girls);
     };
     private calculateTotalBrandOutlayInASchool = (
         inventories: InventoryInterface[],
@@ -710,26 +680,22 @@ export class WisrOptionService {
         return this.mapSchoolWithReachDataAndBrandOutlay(schoolsData).map(
             (school) => ({
                 ...school,
-                inventories: this.calculateInventoriesCostPerSchoolAndImpression(
+                inventories: this.calculateInventoriesImpression(
                     school.inventories,
                     school.reach,
                     school.noOfTeachers,
-                    school.classrooms.length
                 ),
-                events: this.calculateEventsCostPerSchoolAndImpression(
+                events: this.calculateEventsImpression(
                     school.events,
                     school.reach,
-                    school.noOfTeachers,
-                    school.classrooms.length
                 ),
             })
         );
     };
-    private calculateInventoriesCostPerSchoolAndImpression = (
+    private calculateInventoriesImpression = (
         inventories: InventoryInterface[],
         reach: number,
         noOfTeachers: number,
-        noOfClassroom: number
     ) => {
         const totalAttributes = _.sumBy(
             inventories,
@@ -757,11 +723,9 @@ export class WisrOptionService {
             };
         });
     };
-    private calculateEventsCostPerSchoolAndImpression = (
+    private calculateEventsImpression = (
         events: EventInterface[],
-        reach: number,
-        noOfTeachers: number,
-        noOfClassroom: number
+        reach: number
     ) => {
         return events.map((event) => {
             return {
@@ -804,27 +768,10 @@ export class WisrOptionService {
             )
         );
     };
-    private calculateTotalCostPerSchool = (
-        inventories: InventoryInterface[],
-        events: EventInterface[]
-    ) => {
-        return (
-            _.sumBy(inventories, (inventory) =>
-                _.sumBy(inventory.attributes, (attribute) => attribute.costPerSchool)
-            ) +
-            _.sumBy(events, (event) =>
-                _.sumBy(event.attributes, (attribute) => attribute.costPerSchool)
-            )
-        );
-    };
-    private mapWithTotalImpressionsAndCostPerSchool = (schoolsData: any[]) => {
+    private mapWithTotalImpressions = (schoolsData: any[]) => {
         return this.mapWithCostOfProduction(schoolsData).map((school) => ({
             ...school,
             impressions: this.calculateTotalImpressionsInASchool(
-                school.inventories,
-                school.events
-            ),
-            costPerSchool: this.calculateTotalCostPerSchool(
                 school.inventories,
                 school.events
             ),
