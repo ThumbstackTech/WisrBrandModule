@@ -566,7 +566,7 @@ export class WisrOptionService {
             const materialCost = Attribute.materialCost;
             const noOfChanges = this.SetNoOfChanges(Attribute.noOfChangesYearly)
             const netRevenueByDuration = this.SetNetRevenueByDuration(Attribute.netRevenue)
-            const costPerSchoolByDuration = multiplyBy !== 'ByNoOne' ? (materialCost * noOfChanges + (multiplyBy === 'ByStudents' ? noOfStudents : multiplyBy === "ByTeachers" ? noOfTeachers : noOfClassrooms) + 417.07)
+            const costPerSchoolByDuration = multiplyBy !== 'ByNoOne' ? (materialCost * noOfChanges * (multiplyBy === 'ByStudents' ? noOfStudents : multiplyBy === "ByTeachers" ? noOfTeachers : noOfClassrooms) + 417.07)
                 : (Attribute.costPerSchool / Attribute.noOfChangesYearly) * noOfChanges;
             const brandOutlayByDuration = Math.round(netRevenueByDuration + costPerSchoolByDuration);
 
