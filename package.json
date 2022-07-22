@@ -1,6 +1,6 @@
 {
   "name": "wisr_algo",
-  "version": "2.2.0",
+  "version": "2.2.2",
   "description": "Wisr Algorithm",
   "scripts": {
     "build": "tsc wisrOptions.ts --resolveJsonModule --esModuleInterop",

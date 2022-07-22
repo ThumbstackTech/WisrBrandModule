@@ -417,6 +417,15 @@ var WisrOptionService = /** @class */ (function () {
         this.$PercentageDiscountInWISR.next(this.Data.percentageDiscountInWISR);
         this.$InventoriesNames.next(this.Data.InventoriesNames);
         this.$EventsNames.next(this.Data.EventsNames);
+        if (this.Data.InventoryNOP_AffectedByNoOfStudent) {
+            this.$InventoryNOP_AffectedByNoOfStudent.next(__spreadArray(__spreadArray([], this.$InventoryNOP_AffectedByNoOfStudent.getValue(), true), this.Data.InventoryNOP_AffectedByNoOfStudent, true));
+        }
+        if (this.Data.InventoryNOP_AffectedByNoOfTeacher) {
+            this.$InventoryNOP_AffectedByNoOfTeacher.next(__spreadArray(__spreadArray([], this.$InventoryNOP_AffectedByNoOfTeacher.getValue(), true), this.Data.InventoryNOP_AffectedByNoOfTeacher, true));
+        }
+        if (this.Data.InventoryNOP_AffectedByNoOfClassroom) {
+            this.$InventoryNOP_AffectedByNoOfClassroom.next(__spreadArray(__spreadArray([], this.$InventoryNOP_AffectedByNoOfClassroom.getValue(), true), this.Data.InventoryNOP_AffectedByNoOfClassroom, true));
+        }
         this.$TotalInternalCostPerSchool.next(this.Data.totalInternalCostPerSchool);
         this.$CampaignDurationInDays.next(this.Data.campaignDurationInDays);
         this.$NoOfDaysInYear.next(this.Data.noOfDaysInYear);

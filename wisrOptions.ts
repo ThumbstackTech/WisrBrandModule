@@ -131,6 +131,9 @@ export interface WisrOptionServiceInterface {
     EventsNames: string[];
     noOfDaysInYear: number;
     TargetAudience: TargetAudience;
+    InventoryNOP_AffectedByNoOfTeacher?: string[];
+    InventoryNOP_AffectedByNoOfStudent?: string[];
+    InventoryNOP_AffectedByNoOfClassroom?: string[];
 }
 
 export class WisrOptionService {
@@ -196,6 +199,15 @@ export class WisrOptionService {
         this.$PercentageDiscountInWISR.next(this.Data.percentageDiscountInWISR);
         this.$InventoriesNames.next(this.Data.InventoriesNames);
         this.$EventsNames.next(this.Data.EventsNames);
+        if (this.Data.InventoryNOP_AffectedByNoOfStudent) {
+            this.$InventoryNOP_AffectedByNoOfStudent.next([...this.$InventoryNOP_AffectedByNoOfStudent.getValue(),...this.Data.InventoryNOP_AffectedByNoOfStudent]);
+        }
+        if(this.Data.InventoryNOP_AffectedByNoOfTeacher){
+            this.$InventoryNOP_AffectedByNoOfTeacher.next([...this.$InventoryNOP_AffectedByNoOfTeacher.getValue(),...this.Data.InventoryNOP_AffectedByNoOfTeacher]);
+        }
+        if(this.Data.InventoryNOP_AffectedByNoOfClassroom){
+            this.$InventoryNOP_AffectedByNoOfClassroom.next([...this.$InventoryNOP_AffectedByNoOfClassroom.getValue(),...this.Data.InventoryNOP_AffectedByNoOfClassroom]);
+        }
         this.$TotalInternalCostPerSchool.next(this.Data.totalInternalCostPerSchool);
         this.$CampaignDurationInDays.next(this.Data.campaignDurationInDays);
         this.$NoOfDaysInYear.next(this.Data.noOfDaysInYear);
