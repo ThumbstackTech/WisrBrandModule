@@ -549,7 +549,7 @@ export class WisrOptionService {
                 AttributeObj.costPerSchool
         ).map((Attribute) => {
 
-            const inventoryName = InventoryName.toLowerCase().trim();
+            const inventoryName = InventoryName.trim().toLowerCase();
             const multiplyBy: MultiplyBy = this.inventoryNOPAffectedBy(inventoryName);
             const materialCost = Attribute.materialCost;
             const noOfChanges = this.SetNoOfChanges(Attribute.noOfChangesYearly)
@@ -739,17 +739,17 @@ export class WisrOptionService {
     };
     private inventoryNOPAffectedBy = (inventoryParentName: string) => {
         return _.includes(
-            this.$InventoryNOP_AffectedByNoOfStudent.getValue(),
+            this.$InventoryNOP_AffectedByNoOfStudent.getValue().map((item) => item.trim().toLowerCase()),
             inventoryParentName
         )
             ? 'ByStudents'
             : _.includes(
-                this.$InventoryNOP_AffectedByNoOfTeacher.getValue(),
+                this.$InventoryNOP_AffectedByNoOfTeacher.getValue().map((item) => item.trim().toLowerCase()),
                 inventoryParentName
             )
                 ? 'ByTeachers'
                 : _.includes(
-                    this.$InventoryNOP_AffectedByNoOfClassroom.getValue(),
+                    this.$InventoryNOP_AffectedByNoOfClassroom.getValue().map((item) => item.trim().toLowerCase()),
                     inventoryParentName
                 )
                     ? 'ByClassrooms'

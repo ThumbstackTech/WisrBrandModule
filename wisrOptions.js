@@ -207,7 +207,7 @@ var WisrOptionService = /** @class */ (function () {
                     AttributeObj.netRevenue &&
                     AttributeObj.costPerSchool;
             }).map(function (Attribute) {
-                var inventoryName = InventoryName.toLowerCase().trim();
+                var inventoryName = InventoryName.trim().toLowerCase();
                 var multiplyBy = _this.inventoryNOPAffectedBy(inventoryName);
                 var materialCost = Attribute.materialCost;
                 var noOfChanges = _this.SetNoOfChanges(Attribute.noOfChangesYearly);
@@ -327,11 +327,11 @@ var WisrOptionService = /** @class */ (function () {
             });
         };
         this.inventoryNOPAffectedBy = function (inventoryParentName) {
-            return lodash_1["default"].includes(_this.$InventoryNOP_AffectedByNoOfStudent.getValue(), inventoryParentName)
+            return lodash_1["default"].includes(_this.$InventoryNOP_AffectedByNoOfStudent.getValue().map(function (item) { return item.trim().toLowerCase(); }), inventoryParentName)
                 ? 'ByStudents'
-                : lodash_1["default"].includes(_this.$InventoryNOP_AffectedByNoOfTeacher.getValue(), inventoryParentName)
+                : lodash_1["default"].includes(_this.$InventoryNOP_AffectedByNoOfTeacher.getValue().map(function (item) { return item.trim().toLowerCase(); }), inventoryParentName)
                     ? 'ByTeachers'
-                    : lodash_1["default"].includes(_this.$InventoryNOP_AffectedByNoOfClassroom.getValue(), inventoryParentName)
+                    : lodash_1["default"].includes(_this.$InventoryNOP_AffectedByNoOfClassroom.getValue().map(function (item) { return item.trim().toLowerCase(); }), inventoryParentName)
                         ? 'ByClassrooms'
                         : 'ByNoOne';
         };
