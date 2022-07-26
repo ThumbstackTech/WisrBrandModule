@@ -184,6 +184,7 @@ export class WisrOptionService {
         'Uniforms',
         'Sports Uniforms',
         'School Bag',
+        'School Bags',
         'Hallway',
     ]);
     public $InventoryNOP_AffectedByNoOfClassroom = new BehaviorSubject<string[]>([
@@ -469,7 +470,7 @@ export class WisrOptionService {
             const classrooms = this.VerifyAndMapClassroomData(_.filter(this.$ClassroomList.getValue(), (classroom) => classroom.school === school._id)) as ClassroomInterface[]
             const totalNoOfBoys = _.sumBy(classrooms, (classroom) => classroom.boys)
             const totalNoOfGirls = _.sumBy(classrooms, (classroom) => classroom.girls)
-            const reach = totalNoOfBoys + totalNoOfGirls
+            const reach = this.$TargetAudience.getValue() === 'co-ed' ? totalNoOfBoys + totalNoOfGirls : this.$TargetAudience.getValue() === 'boys' ? totalNoOfBoys : totalNoOfGirls
             const noOfTeachers = school.noOfTeachers
             const filteredInventories = _.filter(this.$InventoryList.getValue(), (inventory) => inventory.school === school._id)
             const filteredEvents = _.filter(this.$EventList.getValue(), (Event) => Event.school === school._id)
@@ -564,11 +565,19 @@ export class WisrOptionService {
         ).map((Attribute) => {
 
             const inventoryName = InventoryName.trim().toLowerCase();
+            const attributeName = Attribute.name.trim().toLowerCase();
+            if (inventoryName === 'classroom' && attributeName === 'benches') {
+                noOfStudents = noOfStudents / 2;
+            }
+            if (inventoryName === 'hallway') {
+                noOfStudents = noOfStudents / 2;
+            }
             const multiplyBy: MultiplyBy = this.inventoryNOPAffectedBy(inventoryName);
             const materialCost = Attribute.materialCost;
             const noOfChanges = this.SetNoOfChanges(Attribute.noOfChangesYearly)
             const netRevenueByDuration = this.SetNetRevenueByDuration(Attribute.netRevenue)
-            const costPerSchoolByDuration = multiplyBy !== 'ByNoOne' ? (materialCost * noOfChanges * (multiplyBy === 'ByStudents' ? noOfStudents : multiplyBy === "ByTeachers" ? noOfTeachers : noOfClassrooms) + 417.07)
+            const internalCostByDuration = 417.07 / (this.$NoOfDaysInYear.getValue() / this.$CampaignDurationInDays.getValue())
+            const costPerSchoolByDuration = multiplyBy !== 'ByNoOne' ? (materialCost * noOfChanges * (multiplyBy === 'ByStudents' ? noOfStudents : multiplyBy === "ByTeachers" ? noOfTeachers : noOfClassrooms) + internalCostByDuration)
                 : (Attribute.costPerSchool / Attribute.noOfChangesYearly) * noOfChanges;
             const brandOutlayByDuration = Math.round(netRevenueByDuration + costPerSchoolByDuration);
 
@@ -581,6 +590,7 @@ export class WisrOptionService {
                 height: Attribute.height <= 0 ? 1 : Attribute.height,
                 inventory: Attribute.inventory,
                 opportunitiesToSee: Attribute.opportunitiesToSee,
+                internalCostPerSchool: internalCostByDuration,
                 materialCost,
                 noOfChangesYearly: Attribute.noOfChangesYearly,
                 noOfChanges,
@@ -711,12 +721,6 @@ export class WisrOptionService {
         reach: number,
         noOfTeachers: number,
     ) => {
-        const totalAttributes = _.sumBy(
-            inventories,
-            (inventory) => inventory.attributes.length
-        );
-        const internalCostPerAttribute =
-            this.$TotalInternalCostPerSchool.getValue() / totalAttributes;
         return inventories.map((inventory) => {
             const multiplyBy: MultiplyBy = this.inventoryNOPAffectedBy(
                 inventory.parentName
@@ -725,7 +729,6 @@ export class WisrOptionService {
                 ...inventory,
                 attributes: inventory.attributes.map((attribute) => ({
                     ...attribute,
-                    internalCostPerSchool: internalCostPerAttribute,
                     impressions: multiplyBy === 'ByTeachers'
                         ? noOfTeachers * 0.95 + this.$CampaignDurationInDays.getValue()
                         : reach *

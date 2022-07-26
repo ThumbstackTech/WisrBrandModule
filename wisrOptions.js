@@ -1,4 +1,5 @@
 "use strict";
+//version == 2.2.3
 var __assign = (this && this.__assign) || function () {
     __assign = Object.assign || function(t) {
         for (var s, i = 1, n = arguments.length; i < n; i++) {
@@ -80,6 +81,7 @@ var WisrOptionService = /** @class */ (function () {
             'Uniforms',
             'Sports Uniforms',
             'School Bag',
+            'School Bags',
             'Hallway',
         ]);
         this.$InventoryNOP_AffectedByNoOfClassroom = new rxjs_1.BehaviorSubject([
@@ -128,7 +130,7 @@ var WisrOptionService = /** @class */ (function () {
                 var classrooms = _this.VerifyAndMapClassroomData(lodash_1["default"].filter(_this.$ClassroomList.getValue(), function (classroom) { return classroom.school === school._id; }));
                 var totalNoOfBoys = lodash_1["default"].sumBy(classrooms, function (classroom) { return classroom.boys; });
                 var totalNoOfGirls = lodash_1["default"].sumBy(classrooms, function (classroom) { return classroom.girls; });
-                var reach = totalNoOfBoys + totalNoOfGirls;
+                var reach = _this.$TargetAudience.getValue() === 'co-ed' ? totalNoOfBoys + totalNoOfGirls : _this.$TargetAudience.getValue() === 'boys' ? totalNoOfBoys : totalNoOfGirls;
                 var noOfTeachers = school.noOfTeachers;
                 var filteredInventories = lodash_1["default"].filter(_this.$InventoryList.getValue(), function (inventory) { return inventory.school === school._id; });
                 var filteredEvents = lodash_1["default"].filter(_this.$EventList.getValue(), function (Event) { return Event.school === school._id; });
@@ -208,11 +210,19 @@ var WisrOptionService = /** @class */ (function () {
                     AttributeObj.costPerSchool;
             }).map(function (Attribute) {
                 var inventoryName = InventoryName.trim().toLowerCase();
+                var attributeName = Attribute.name.trim().toLowerCase();
+                if (inventoryName === 'classroom' && attributeName === 'benches') {
+                    noOfStudents = noOfStudents / 2;
+                }
+                if (inventoryName === 'hallway') {
+                    noOfStudents = noOfStudents / 2;
+                }
                 var multiplyBy = _this.inventoryNOPAffectedBy(inventoryName);
                 var materialCost = Attribute.materialCost;
                 var noOfChanges = _this.SetNoOfChanges(Attribute.noOfChangesYearly);
                 var netRevenueByDuration = _this.SetNetRevenueByDuration(Attribute.netRevenue);
-                var costPerSchoolByDuration = multiplyBy !== 'ByNoOne' ? (materialCost * noOfChanges + (multiplyBy === 'ByStudents' ? noOfStudents : multiplyBy === "ByTeachers" ? noOfTeachers : noOfClassrooms) + 417.07)
+                var internalCostByDuration = 417.07 / (_this.$NoOfDaysInYear.getValue() / _this.$CampaignDurationInDays.getValue());
+                var costPerSchoolByDuration = multiplyBy !== 'ByNoOne' ? (materialCost * noOfChanges * (multiplyBy === 'ByStudents' ? noOfStudents : multiplyBy === "ByTeachers" ? noOfTeachers : noOfClassrooms) + internalCostByDuration)
                     : (Attribute.costPerSchool / Attribute.noOfChangesYearly) * noOfChanges;
                 var brandOutlayByDuration = Math.round(netRevenueByDuration + costPerSchoolByDuration);
                 return {
@@ -224,6 +234,7 @@ var WisrOptionService = /** @class */ (function () {
                     height: Attribute.height <= 0 ? 1 : Attribute.height,
                     inventory: Attribute.inventory,
                     opportunitiesToSee: Attribute.opportunitiesToSee,
+                    internalCostPerSchool: internalCostByDuration,
                     materialCost: materialCost,
                     noOfChangesYearly: Attribute.noOfChangesYearly,
                     noOfChanges: noOfChanges,
@@ -309,11 +320,9 @@ var WisrOptionService = /** @class */ (function () {
             return _this.mapSchoolWithReachDataAndBrandOutlay(schoolsData).map(function (school) { return (__assign(__assign({}, school), { inventories: _this.calculateInventoriesImpression(school.inventories, school.reach, school.noOfTeachers), events: _this.calculateEventsImpression(school.events, school.reach) })); });
         };
         this.calculateInventoriesImpression = function (inventories, reach, noOfTeachers) {
-            var totalAttributes = lodash_1["default"].sumBy(inventories, function (inventory) { return inventory.attributes.length; });
-            var internalCostPerAttribute = _this.$TotalInternalCostPerSchool.getValue() / totalAttributes;
             return inventories.map(function (inventory) {
                 var multiplyBy = _this.inventoryNOPAffectedBy(inventory.parentName);
-                return __assign(__assign({}, inventory), { attributes: inventory.attributes.map(function (attribute) { return (__assign(__assign({}, attribute), { internalCostPerSchool: internalCostPerAttribute, impressions: multiplyBy === 'ByTeachers'
+                return __assign(__assign({}, inventory), { attributes: inventory.attributes.map(function (attribute) { return (__assign(__assign({}, attribute), { impressions: multiplyBy === 'ByTeachers'
                             ? noOfTeachers * 0.95 + _this.$CampaignDurationInDays.getValue()
                             : reach *
                                 0.9 *
