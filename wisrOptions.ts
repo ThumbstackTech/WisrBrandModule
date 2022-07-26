@@ -1,4 +1,4 @@
-//version == 2.2.3
+//version == 2.2.6
 
 import {BehaviorSubject} from 'rxjs';
 import _ from 'lodash';
