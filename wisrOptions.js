@@ -61,6 +61,8 @@ var WisrOptionService = /** @class */ (function () {
         this.$SetImpressions = new rxjs_1.BehaviorSubject(0);
         this.$GetImpression = new rxjs_1.BehaviorSubject(0);
         this.$TotalInternalCostPerSchool = new rxjs_1.BehaviorSubject(0);
+        this.$TotalInventoriesAttributesOfSchool = new rxjs_1.BehaviorSubject(34);
+        this.$InternalCostPerSchool = new rxjs_1.BehaviorSubject(417.07);
         this.$CatASchool = new rxjs_1.BehaviorSubject([]);
         this.$CatBSchool = new rxjs_1.BehaviorSubject([]);
         this.$CatCSchool = new rxjs_1.BehaviorSubject([]);
@@ -221,8 +223,8 @@ var WisrOptionService = /** @class */ (function () {
                 var materialCost = Attribute.materialCost;
                 var noOfChanges = _this.SetNoOfChanges(Attribute.noOfChangesYearly);
                 var netRevenueByDuration = _this.SetNetRevenueByDuration(Attribute.netRevenue);
-                var internalCostByDuration = 417.07 / (_this.$NoOfDaysInYear.getValue() / _this.$CampaignDurationInDays.getValue());
-                var costPerSchoolByDuration = multiplyBy !== 'ByNoOne' ? (materialCost * noOfChanges * (multiplyBy === 'ByStudents' ? noOfStudents : multiplyBy === "ByTeachers" ? noOfTeachers : noOfClassrooms) + internalCostByDuration)
+                var internalCostByNoOfChanges = (_this.$InternalCostPerSchool.getValue() / Attribute.noOfChangesYearly) * noOfChanges;
+                var costPerSchoolByDuration = multiplyBy !== 'ByNoOne' ? (materialCost * noOfChanges * (multiplyBy === 'ByStudents' ? noOfStudents : multiplyBy === "ByTeachers" ? noOfTeachers : noOfClassrooms) + internalCostByNoOfChanges)
                     : (Attribute.costPerSchool / Attribute.noOfChangesYearly) * noOfChanges;
                 var brandOutlayByDuration = Math.round(netRevenueByDuration + costPerSchoolByDuration);
                 return {
@@ -234,7 +236,7 @@ var WisrOptionService = /** @class */ (function () {
                     height: Attribute.height <= 0 ? 1 : Attribute.height,
                     inventory: Attribute.inventory,
                     opportunitiesToSee: Attribute.opportunitiesToSee,
-                    internalCostPerSchool: internalCostByDuration,
+                    internalCostPerSchool: internalCostByNoOfChanges,
                     materialCost: materialCost,
                     noOfChangesYearly: Attribute.noOfChangesYearly,
                     noOfChanges: noOfChanges,
@@ -436,6 +438,8 @@ var WisrOptionService = /** @class */ (function () {
             this.$InventoryNOP_AffectedByNoOfClassroom.next(__spreadArray(__spreadArray([], this.$InventoryNOP_AffectedByNoOfClassroom.getValue(), true), this.Data.InventoryNOP_AffectedByNoOfClassroom, true));
         }
         this.$TotalInternalCostPerSchool.next(this.Data.totalInternalCostPerSchool);
+        this.$TotalInventoriesAttributesOfSchool.next(this.Data.TotalInventoriesAttributesOfSchool || 34);
+        this.$InternalCostPerSchool.next(this.$TotalInternalCostPerSchool.getValue() / this.$TotalInventoriesAttributesOfSchool.getValue());
         this.$CampaignDurationInDays.next(this.Data.campaignDurationInDays);
         this.$NoOfDaysInYear.next(this.Data.noOfDaysInYear);
         this.$BudgetRatio.subscribe({

@@ -136,6 +136,7 @@ export interface WisrOptionServiceInterface {
     InventoryNOP_AffectedByNoOfTeacher?: string[];
     InventoryNOP_AffectedByNoOfStudent?: string[];
     InventoryNOP_AffectedByNoOfClassroom?: string[];
+    TotalInventoriesAttributesOfSchool?: number
 }
 
 export class WisrOptionService {
@@ -164,6 +165,8 @@ export class WisrOptionService {
     public $SetImpressions = new BehaviorSubject<number>(0);
     public $GetImpression = new BehaviorSubject<number>(0);
     public $TotalInternalCostPerSchool = new BehaviorSubject<number>(0);
+    public $TotalInventoriesAttributesOfSchool = new BehaviorSubject<number>(34);
+    public $InternalCostPerSchool = new BehaviorSubject<number>(417.07);
     public $CatASchool = new BehaviorSubject<FinalSchool[]>([]);
     public $CatBSchool = new BehaviorSubject<FinalSchool[]>([]);
     public $CatCSchool = new BehaviorSubject<FinalSchool[]>([]);
@@ -212,6 +215,8 @@ export class WisrOptionService {
             this.$InventoryNOP_AffectedByNoOfClassroom.next([...this.$InventoryNOP_AffectedByNoOfClassroom.getValue(), ...this.Data.InventoryNOP_AffectedByNoOfClassroom]);
         }
         this.$TotalInternalCostPerSchool.next(this.Data.totalInternalCostPerSchool);
+        this.$TotalInventoriesAttributesOfSchool.next(this.Data.TotalInventoriesAttributesOfSchool||34);
+        this.$InternalCostPerSchool.next(this.$TotalInternalCostPerSchool.getValue() / this.$TotalInventoriesAttributesOfSchool.getValue());
         this.$CampaignDurationInDays.next(this.Data.campaignDurationInDays);
         this.$NoOfDaysInYear.next(this.Data.noOfDaysInYear);
         this.$BudgetRatio.subscribe({
@@ -576,8 +581,8 @@ export class WisrOptionService {
             const materialCost = Attribute.materialCost;
             const noOfChanges = this.SetNoOfChanges(Attribute.noOfChangesYearly)
             const netRevenueByDuration = this.SetNetRevenueByDuration(Attribute.netRevenue)
-            const internalCostByDuration = 417.07 / (this.$NoOfDaysInYear.getValue() / this.$CampaignDurationInDays.getValue())
-            const costPerSchoolByDuration = multiplyBy !== 'ByNoOne' ? (materialCost * noOfChanges * (multiplyBy === 'ByStudents' ? noOfStudents : multiplyBy === "ByTeachers" ? noOfTeachers : noOfClassrooms) + internalCostByDuration)
+            const internalCostByNoOfChanges = (this.$InternalCostPerSchool.getValue() / Attribute.noOfChangesYearly) * noOfChanges
+            const costPerSchoolByDuration = multiplyBy !== 'ByNoOne' ? (materialCost * noOfChanges * (multiplyBy === 'ByStudents' ? noOfStudents : multiplyBy === "ByTeachers" ? noOfTeachers : noOfClassrooms) + internalCostByNoOfChanges)
                 : (Attribute.costPerSchool / Attribute.noOfChangesYearly) * noOfChanges;
             const brandOutlayByDuration = Math.round(netRevenueByDuration + costPerSchoolByDuration);
 
@@ -590,7 +595,7 @@ export class WisrOptionService {
                 height: Attribute.height <= 0 ? 1 : Attribute.height,
                 inventory: Attribute.inventory,
                 opportunitiesToSee: Attribute.opportunitiesToSee,
-                internalCostPerSchool: internalCostByDuration,
+                internalCostPerSchool: internalCostByNoOfChanges,
                 materialCost,
                 noOfChangesYearly: Attribute.noOfChangesYearly,
                 noOfChanges,
