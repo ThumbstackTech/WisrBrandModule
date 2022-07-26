@@ -212,7 +212,7 @@ var WisrOptionService = /** @class */ (function () {
                 var inventoryName = InventoryName.trim().toLowerCase();
                 var attributeName = Attribute.name.trim().toLowerCase();
                 if (inventoryName === 'classroom' && attributeName === 'benches') {
-                    noOfStudents = noOfStudents / 2;
+                    noOfClassrooms = noOfStudents / 2; // here noOfClassrooms is used to calculate the number of benches
                 }
                 if (inventoryName === 'hallway') {
                     noOfStudents = noOfStudents / 2;
